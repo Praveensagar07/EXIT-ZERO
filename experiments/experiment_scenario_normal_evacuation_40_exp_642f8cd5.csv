@@ -1,0 +1,27 @@
+# EXIT-ZERO Experimental Benchmark Export
+# Scenario ID,scenario_normal_evacuation
+# Scenario Name,Scenario 1: Normal Evacuation (All Exits Clear)
+# Occupants (N),40
+# Sample Size (Seeds),2
+# Timestamp,2026-11-11T08:32:33.634403+00:00
+
+SUMMARY_STATISTICS
+Metric,Baseline,Adaptive (EXIT-ZERO),Delta (Baseline - Adapt),Relative % Improvement
+Mean Total Evacuation Time (s),,,,N/A
+Median Total Evacuation Time (s),,,,N/A
+Std Dev Evacuation Time (s),,,N/A,N/A
+95% Bootstrap CI for Delta (s),,,"[None, None]",
+Permutation Test p-value,,,,Statistically Significant: NO
+Wins / Losses / Ties,Baseline Wins: 0,Adaptive Wins: 0,Ties: 2,
+Mean Peak Queue Reduction,,,0.0,occupants
+Mean Peak Density Reduction,,,-0.58,pers/m²
+Mean Waiting Time Reduction,,,-0.03,seconds
+Mean Hazard Exposure Reduction,,,0.0,dosage
+Mean Adaptive Reroutes,,,0.0,reroutes/trial
+Total Wall Benchmark Time (s),,,4.968,
+Peak Memory (MB),,,0.86,
+
+PER_SEED_TRIAL_DATA
+Seed,Winner,Base_Evac_Time_s,Adapt_Evac_Time_s,Delta_Time_s,Rel_Time_Imp_Pct,Base_Median_Time_s,Adapt_Median_Time_s,Base_Peak_Queue,Adapt_Peak_Queue,Delta_Peak_Queue,Base_Peak_Density,Adapt_Peak_Density,Delta_Peak_Density,Base_Wait_Time_s,Adapt_Wait_Time_s,Base_Hazard_Exposure,Adapt_Hazard_Exposure,Adapt_Reroutes,Base_Wall_ms,Adapt_Wall_ms
+201,tie,,,,,22.5,22.5,1,1,0,0.42,1.0,-0.58,0.06,0.1,0.0,0.0,0,427.17,1869.51
+202,tie,,,,,22.0,22.5,1,1,0,0.42,1.0,-0.58,0.03,0.04,0.0,0.0,0,567.54,2100.61

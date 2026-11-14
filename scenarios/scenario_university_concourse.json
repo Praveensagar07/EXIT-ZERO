@@ -1,0 +1,297 @@
+{
+  "id": "scenario_university_concourse",
+  "name": "University Science Concourse: High-Density Egress",
+  "description": "High-density scenario with 250 occupants flowing from a major auditorium and science labs.",
+  "building": {
+    "id": "bldg_univ",
+    "name": "Science Complex",
+    "description": "Multi-department academic building",
+    "floors": [
+      {
+        "id": "floor_concourse",
+        "name": "Level 1 Science Concourse",
+        "level": 1,
+        "width": 90.0,
+        "height": 55.0,
+        "rooms": [
+          {
+            "id": "hall_alpha",
+            "floor_id": "floor_concourse",
+            "name": "Grand Lecture Hall Alpha",
+            "bounds": {
+              "x": 8.0,
+              "y": 6.0,
+              "width": 32.0,
+              "height": 18.0
+            },
+            "room_type": "conference",
+            "max_capacity": 120
+          },
+          {
+            "id": "lab_nano",
+            "floor_id": "floor_concourse",
+            "name": "Nanotech Cleanroom",
+            "bounds": {
+              "x": 46.0,
+              "y": 6.0,
+              "width": 20.0,
+              "height": 18.0
+            },
+            "room_type": "lab",
+            "max_capacity": 30
+          },
+          {
+            "id": "lab_chem",
+            "floor_id": "floor_concourse",
+            "name": "Materials Chemistry Suite",
+            "bounds": {
+              "x": 70.0,
+              "y": 6.0,
+              "width": 15.0,
+              "height": 18.0
+            },
+            "room_type": "lab",
+            "max_capacity": 20
+          },
+          {
+            "id": "commons",
+            "floor_id": "floor_concourse",
+            "name": "Student Commons & Study Lounge",
+            "bounds": {
+              "x": 8.0,
+              "y": 32.0,
+              "width": 40.0,
+              "height": 16.0
+            },
+            "room_type": "cafeteria",
+            "max_capacity": 80
+          },
+          {
+            "id": "faculty",
+            "floor_id": "floor_concourse",
+            "name": "Faculty Offices & Administration",
+            "bounds": {
+              "x": 54.0,
+              "y": 32.0,
+              "width": 30.0,
+              "height": 16.0
+            },
+            "room_type": "office",
+            "max_capacity": 40
+          }
+        ],
+        "doorways": [
+          {
+            "id": "door_hall_1",
+            "floor_id": "floor_concourse",
+            "x": 16.0,
+            "y": 24.0,
+            "width": 2.0,
+            "connects_rooms": [
+              "hall_alpha"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_hall_2",
+            "floor_id": "floor_concourse",
+            "x": 32.0,
+            "y": 24.0,
+            "width": 2.0,
+            "connects_rooms": [
+              "hall_alpha"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_nano",
+            "floor_id": "floor_concourse",
+            "x": 56.0,
+            "y": 24.0,
+            "width": 1.5,
+            "connects_rooms": [
+              "lab_nano"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_chem",
+            "floor_id": "floor_concourse",
+            "x": 77.0,
+            "y": 24.0,
+            "width": 1.5,
+            "connects_rooms": [
+              "lab_chem"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_commons_1",
+            "floor_id": "floor_concourse",
+            "x": 18.0,
+            "y": 32.0,
+            "width": 2.4,
+            "connects_rooms": [
+              "commons"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_commons_2",
+            "floor_id": "floor_concourse",
+            "x": 36.0,
+            "y": 32.0,
+            "width": 2.4,
+            "connects_rooms": [
+              "commons"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_faculty",
+            "floor_id": "floor_concourse",
+            "x": 68.0,
+            "y": 32.0,
+            "width": 1.8,
+            "connects_rooms": [
+              "faculty"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          }
+        ],
+        "obstacles": [
+          {
+            "id": "info_kiosk",
+            "floor_id": "floor_concourse",
+            "x": 44.0,
+            "y": 27.0,
+            "width": 3.0,
+            "height": 2.0,
+            "obstacle_type": "furniture",
+            "passable": false
+          }
+        ],
+        "exits": [
+          {
+            "id": "exit_concourse_west",
+            "floor_id": "floor_concourse",
+            "name": "West Campus Plaza Exit",
+            "x": 3.0,
+            "y": 27.5,
+            "width": 3.5,
+            "throughput_per_sec": 3.8,
+            "is_wheelchair_accessible": true,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          },
+          {
+            "id": "exit_concourse_east",
+            "floor_id": "floor_concourse",
+            "name": "East Courtyard Exit",
+            "x": 87.0,
+            "y": 27.5,
+            "width": 3.0,
+            "throughput_per_sec": 3.2,
+            "is_wheelchair_accessible": true,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          },
+          {
+            "id": "exit_concourse_south",
+            "floor_id": "floor_concourse",
+            "name": "South Transit Link Exit",
+            "x": 45.0,
+            "y": 52.0,
+            "width": 2.5,
+            "throughput_per_sec": 2.8,
+            "is_wheelchair_accessible": false,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          }
+        ],
+        "stairwells": []
+      }
+    ]
+  },
+  "hazard_sources": [
+    {
+      "id": "chem_spill_fire",
+      "floor_id": "floor_concourse",
+      "x": 75.0,
+      "y": 12.0,
+      "hazard_type": "smoke",
+      "start_time_sec": 10.0,
+      "growth_rate": 0.22,
+      "max_radius": 22.0,
+      "intensity": 0.9
+    }
+  ],
+  "spawn_zones": [
+    {
+      "id": "sp_hall",
+      "floor_id": "floor_concourse",
+      "name": "Lecture Hall Alpha",
+      "bounds": {
+        "x": 10.0,
+        "y": 8.0,
+        "width": 28.0,
+        "height": 14.0
+      },
+      "occupant_count": 120,
+      "wheelchair_ratio": 0.08,
+      "reduced_mobility_ratio": 0.08
+    },
+    {
+      "id": "sp_commons",
+      "floor_id": "floor_concourse",
+      "name": "Student Commons",
+      "bounds": {
+        "x": 10.0,
+        "y": 34.0,
+        "width": 36.0,
+        "height": 12.0
+      },
+      "occupant_count": 70,
+      "wheelchair_ratio": 0.06,
+      "reduced_mobility_ratio": 0.1
+    },
+    {
+      "id": "sp_labs",
+      "floor_id": "floor_concourse",
+      "name": "Labs & Faculty",
+      "bounds": {
+        "x": 48.0,
+        "y": 8.0,
+        "width": 35.0,
+        "height": 14.0
+      },
+      "occupant_count": 60,
+      "wheelchair_ratio": 0.05,
+      "reduced_mobility_ratio": 0.05
+    }
+  ],
+  "events": [],
+  "total_occupants": 250,
+  "default_seed": 101,
+  "algorithm_weights": {
+    "w_distance": 1.0,
+    "w_congestion": 2.0,
+    "w_queue": 2.5,
+    "w_hazard": 8.0,
+    "w_reroute": 5.0,
+    "w_accessibility": 1000.0,
+    "hysteresis_threshold": 0.2,
+    "replan_interval_sec": 4.0,
+    "prediction_horizon_sec": 20.0
+  }
+}

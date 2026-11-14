@@ -1,0 +1,33 @@
+# EXIT-ZERO Experimental Benchmark Export
+# Scenario ID,scenario_congested_corridor
+# Scenario Name,Scenario B: Congested Central Corridor
+# Occupants (N),500
+# Sample Size (Seeds),3
+# Evidence Tier,preliminary
+# Uncertainty Note,Fewer than 10 completed paired seeds; treat estimates and intervals as preliminary.
+# Timestamp,2026-11-11T09:02:27.246155+00:00
+
+SUMMARY_STATISTICS
+Metric,Baseline,Adaptive (EXIT-ZERO),Delta (Baseline - Adapt),Relative % Improvement
+Mean Total Evacuation Time (s),231.83,131.67,100.17,43.2%
+Median Total Evacuation Time (s),232.5,133.5,99.0,N/A
+Std Dev Evacuation Time (s),5.03,9.39,N/A,N/A
+95% Bootstrap CI for Delta (s),,,"[86.5, 115.0]",
+Permutation Test p-value,,,0.25,Statistically Significant: NO
+Wins / Losses / Ties,Baseline Wins: 0,Adaptive Wins: 3,Ties: 0,
+Mean Peak Queue Reduction,,,13.33,occupants
+Mean Peak Density Reduction,,,0.85,pers/m²
+Mean Waiting Time Reduction,,,0.46,seconds
+Mean Hazard Exposure Reduction,,,0.0,dosage
+Mean Adaptive Reroutes,,,137.33,reroutes/trial
+Mean Wheelchair Evacuation Time (s),168.78,79.47,89.31,positive delta favors EXIT-ZERO
+Total Wall Benchmark Time (s),,,378.77,
+"Peak Python Heap (MB, tracemalloc)",,,5.64,
+"Peak Process RSS (MB, sampled)",,,67.5,
+Memory Measurement Note,,,Python heap is measured by tracemalloc; process RSS is sampled with psutil at simulation-step boundaries.,
+
+PER_SEED_TRIAL_DATA
+Seed,Winner,Base_Evac_Time_s,Adapt_Evac_Time_s,Delta_Time_s,Rel_Time_Imp_Pct,Base_Median_Time_s,Adapt_Median_Time_s,Base_Peak_Queue,Adapt_Peak_Queue,Delta_Peak_Queue,Base_Peak_Density,Adapt_Peak_Density,Delta_Peak_Density,Base_Wait_Time_s,Adapt_Wait_Time_s,Base_Hazard_Exposure,Adapt_Hazard_Exposure,Adapt_Reroutes,Base_Wheelchair_Mean_Evac_Time_s,Adapt_Wheelchair_Mean_Evac_Time_s,Delta_Wheelchair_Mean_Evac_Time_s,Base_Wall_ms,Adapt_Wall_ms,Peak_Process_RSS_MB
+101,adaptive,236.5,121.5,115.0,48.63,122.0,56.75,41,14,27,10.1,9.06,1.04,2.44,0.99,0.0,0.0,103,176.34,73.05,103.29,9256.22,79327.14,67.5
+102,adaptive,226.5,140.0,86.5,38.19,133.5,57.5,27,17,10,10.81,10.31,0.5,1.51,1.23,0.0,0.0,173,154.76,78.32,76.44,8841.74,91153.94,47.3
+103,adaptive,232.5,133.5,99.0,42.58,139.5,60.75,29,26,3,11.01,10.0,1.01,1.45,1.79,0.0,0.0,136,175.24,87.04,88.2,18937.38,171207.32,37.56

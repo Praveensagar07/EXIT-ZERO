@@ -1,0 +1,33 @@
+# EXIT-ZERO Experimental Benchmark Export
+# Scenario ID,scenario_congested_corridor
+# Scenario Name,Scenario B: Congested Central Corridor
+# Occupants (N),100
+# Sample Size (Seeds),3
+# Evidence Tier,preliminary
+# Uncertainty Note,Fewer than 10 completed paired seeds; treat estimates and intervals as preliminary.
+# Timestamp,2026-11-14T07:14:36.373290+00:00
+
+SUMMARY_STATISTICS
+Metric,Baseline,Adaptive (EXIT-ZERO),Delta (Baseline - Adapt),Relative % Improvement
+Mean Total Evacuation Time (s),57.0,60.83,-3.83,-6.72%
+Median Total Evacuation Time (s),59.0,56.5,2.5,N/A
+Std Dev Evacuation Time (s),3.91,9.29,N/A,N/A
+95% Bootstrap CI for Delta (s),,,"[-19.0, 5.0]",
+Permutation Test p-value,,,1.0,Statistically Significant: NO
+Wins / Losses / Ties,Baseline Wins: 1,Adaptive Wins: 2,Ties: 0,
+Mean Peak Queue Reduction,,,3.0,occupants
+Mean Peak Density Reduction,,,-0.51,pers/m²
+Mean Waiting Time Reduction,,,0.13,seconds
+Mean Hazard Exposure Reduction,,,0.0,dosage
+Mean Adaptive Reroutes,,,0.33,reroutes/trial
+Mean Wheelchair Evacuation Time (s),47.79,44.33,3.46,positive delta favors EXIT-ZERO
+Total Wall Benchmark Time (s),,,4.254,
+"Peak Python Heap (MB, tracemalloc)",,,1.6,
+"Peak Process RSS (MB, sampled)",,,145.2,
+Memory Measurement Note,,,Python heap is measured by tracemalloc; process RSS is sampled with psutil at simulation-step boundaries.,
+
+PER_SEED_TRIAL_DATA
+Seed,Winner,Base_Evac_Time_s,Adapt_Evac_Time_s,Delta_Time_s,Rel_Time_Imp_Pct,Base_Median_Time_s,Adapt_Median_Time_s,Base_Peak_Queue,Adapt_Peak_Queue,Delta_Peak_Queue,Base_Peak_Density,Adapt_Peak_Density,Delta_Peak_Density,Base_Wait_Time_s,Adapt_Wait_Time_s,Base_Hazard_Exposure,Adapt_Hazard_Exposure,Adapt_Reroutes,Base_Wheelchair_Mean_Evac_Time_s,Adapt_Wheelchair_Mean_Evac_Time_s,Delta_Wheelchair_Mean_Evac_Time_s,Base_Wall_ms,Adapt_Wall_ms,Peak_Process_RSS_MB
+101,adaptive,59.0,56.5,2.5,4.24,33.25,28.75,5,3,2,2.18,2.0,0.18,0.33,0.24,0.0,0.0,0,52.06,48.31,3.75,348.29,1082.58,145.02
+102,adaptive,59.5,54.5,5.0,8.4,36.0,30.5,8,2,6,3.0,3.0,0.0,0.52,0.14,0.0,0.0,0,48.88,44.38,4.5,370.83,1064.47,145.07
+103,baseline,52.5,71.5,-19.0,-36.19,29.25,27.25,4,3,1,2.29,4.0,-1.71,0.12,0.2,0.0,0.0,1,42.43,40.29,2.14,324.16,1057.74,145.2

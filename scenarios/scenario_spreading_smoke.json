@@ -1,0 +1,513 @@
+{
+  "id": "scenario_spreading_smoke",
+  "name": "Scenario C: Spreading Smoke Near Preferred Exit",
+  "description": "Smoke spreads rapidly near the main northern portal. Tests predictive hazard avoidance preventing severe exposure dosage compared to shortest-path.",
+  "building": {
+    "id": "bldg_hq_c",
+    "name": "Apex Innovation HQ (Scenario C)",
+    "description": "Spreading smoke hazard demonstration",
+    "floors": [
+      {
+        "id": "floor_c",
+        "name": "Ground Operations & Corporate Suites",
+        "level": 1,
+        "width": 80.0,
+        "height": 45.0,
+        "rooms": [
+          {
+            "id": "room_101",
+            "floor_id": "floor_c",
+            "name": "Executive Suite 101",
+            "bounds": {
+              "x": 5.0,
+              "y": 5.0,
+              "width": 12.0,
+              "height": 10.0
+            },
+            "room_type": "office",
+            "max_capacity": 10
+          },
+          {
+            "id": "room_102",
+            "floor_id": "floor_c",
+            "name": "Finance Office 102",
+            "bounds": {
+              "x": 19.0,
+              "y": 5.0,
+              "width": 12.0,
+              "height": 10.0
+            },
+            "room_type": "office",
+            "max_capacity": 12
+          },
+          {
+            "id": "room_103",
+            "floor_id": "floor_c",
+            "name": "Main Boardroom A",
+            "bounds": {
+              "x": 33.0,
+              "y": 5.0,
+              "width": 16.0,
+              "height": 10.0
+            },
+            "room_type": "conference",
+            "max_capacity": 25
+          },
+          {
+            "id": "room_104",
+            "floor_id": "floor_c",
+            "name": "Engineering Lab 104",
+            "bounds": {
+              "x": 51.0,
+              "y": 5.0,
+              "width": 12.0,
+              "height": 10.0
+            },
+            "room_type": "lab",
+            "max_capacity": 15
+          },
+          {
+            "id": "room_105",
+            "floor_id": "floor_c",
+            "name": "Server & Telecom Room",
+            "bounds": {
+              "x": 65.0,
+              "y": 5.0,
+              "width": 10.0,
+              "height": 10.0
+            },
+            "room_type": "storage",
+            "max_capacity": 5
+          },
+          {
+            "id": "room_hub",
+            "floor_id": "floor_c",
+            "name": "Central Atrium & Cafeteria",
+            "bounds": {
+              "x": 28.0,
+              "y": 17.0,
+              "width": 24.0,
+              "height": 11.0
+            },
+            "room_type": "cafeteria",
+            "max_capacity": 45
+          },
+          {
+            "id": "room_201",
+            "floor_id": "floor_c",
+            "name": "Operations Center 201",
+            "bounds": {
+              "x": 5.0,
+              "y": 30.0,
+              "width": 14.0,
+              "height": 10.0
+            },
+            "room_type": "office",
+            "max_capacity": 18
+          },
+          {
+            "id": "room_202",
+            "floor_id": "floor_c",
+            "name": "Product Design 202",
+            "bounds": {
+              "x": 21.0,
+              "y": 30.0,
+              "width": 12.0,
+              "height": 10.0
+            },
+            "room_type": "office",
+            "max_capacity": 14
+          },
+          {
+            "id": "room_203",
+            "floor_id": "floor_c",
+            "name": "Conference Room B",
+            "bounds": {
+              "x": 35.0,
+              "y": 30.0,
+              "width": 14.0,
+              "height": 10.0
+            },
+            "room_type": "conference",
+            "max_capacity": 20
+          },
+          {
+            "id": "room_204",
+            "floor_id": "floor_c",
+            "name": "Legal & Compliance 204",
+            "bounds": {
+              "x": 51.0,
+              "y": 30.0,
+              "width": 11.0,
+              "height": 10.0
+            },
+            "room_type": "office",
+            "max_capacity": 12
+          },
+          {
+            "id": "room_205",
+            "floor_id": "floor_c",
+            "name": "Restrooms & Lockers",
+            "bounds": {
+              "x": 64.0,
+              "y": 30.0,
+              "width": 11.0,
+              "height": 10.0
+            },
+            "room_type": "restroom",
+            "max_capacity": 10
+          }
+        ],
+        "doorways": [
+          {
+            "id": "door_101",
+            "floor_id": "floor_c",
+            "x": 11.0,
+            "y": 15.0,
+            "width": 1.1,
+            "connects_rooms": [
+              "room_101"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_102",
+            "floor_id": "floor_c",
+            "x": 25.0,
+            "y": 15.0,
+            "width": 1.1,
+            "connects_rooms": [
+              "room_102"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_103",
+            "floor_id": "floor_c",
+            "x": 41.0,
+            "y": 15.0,
+            "width": 1.8,
+            "connects_rooms": [
+              "room_103"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_104",
+            "floor_id": "floor_c",
+            "x": 57.0,
+            "y": 15.0,
+            "width": 1.2,
+            "connects_rooms": [
+              "room_104"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_105",
+            "floor_id": "floor_c",
+            "x": 70.0,
+            "y": 15.0,
+            "width": 1.0,
+            "connects_rooms": [
+              "room_105"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_hub_n",
+            "floor_id": "floor_c",
+            "x": 40.0,
+            "y": 17.0,
+            "width": 2.2,
+            "connects_rooms": [
+              "room_hub"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_hub_s",
+            "floor_id": "floor_c",
+            "x": 40.0,
+            "y": 28.0,
+            "width": 2.2,
+            "connects_rooms": [
+              "room_hub"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_hub_w",
+            "floor_id": "floor_c",
+            "x": 28.0,
+            "y": 22.5,
+            "width": 1.8,
+            "connects_rooms": [
+              "room_hub"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_hub_e",
+            "floor_id": "floor_c",
+            "x": 52.0,
+            "y": 22.5,
+            "width": 1.8,
+            "connects_rooms": [
+              "room_hub"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_201",
+            "floor_id": "floor_c",
+            "x": 12.0,
+            "y": 30.0,
+            "width": 1.2,
+            "connects_rooms": [
+              "room_201"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_202",
+            "floor_id": "floor_c",
+            "x": 27.0,
+            "y": 30.0,
+            "width": 1.1,
+            "connects_rooms": [
+              "room_202"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_203",
+            "floor_id": "floor_c",
+            "x": 42.0,
+            "y": 30.0,
+            "width": 1.6,
+            "connects_rooms": [
+              "room_203"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_204",
+            "floor_id": "floor_c",
+            "x": 56.5,
+            "y": 30.0,
+            "width": 1.1,
+            "connects_rooms": [
+              "room_204"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_205",
+            "floor_id": "floor_c",
+            "x": 69.5,
+            "y": 30.0,
+            "width": 1.1,
+            "connects_rooms": [
+              "room_205"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          }
+        ],
+        "obstacles": [
+          {
+            "id": "col_1",
+            "floor_id": "floor_c",
+            "x": 20.0,
+            "y": 22.0,
+            "width": 1.2,
+            "height": 1.2,
+            "obstacle_type": "column",
+            "passable": false
+          },
+          {
+            "id": "col_2",
+            "floor_id": "floor_c",
+            "x": 60.0,
+            "y": 22.0,
+            "width": 1.2,
+            "height": 1.2,
+            "obstacle_type": "column",
+            "passable": false
+          },
+          {
+            "id": "col_3",
+            "floor_id": "floor_c",
+            "x": 15.0,
+            "y": 15.0,
+            "width": 1.0,
+            "height": 1.0,
+            "obstacle_type": "column",
+            "passable": false
+          },
+          {
+            "id": "col_4",
+            "floor_id": "floor_c",
+            "x": 65.0,
+            "y": 15.0,
+            "width": 1.0,
+            "height": 1.0,
+            "obstacle_type": "column",
+            "passable": false
+          }
+        ],
+        "exits": [
+          {
+            "id": "exit_north_main",
+            "floor_id": "floor_c",
+            "name": "Exit A: North Grand Portal",
+            "x": 40.0,
+            "y": 2.0,
+            "width": 3.0,
+            "throughput_per_sec": 3.2,
+            "is_wheelchair_accessible": true,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          },
+          {
+            "id": "exit_east_fire",
+            "floor_id": "floor_c",
+            "name": "Exit B: East Fire Escape",
+            "x": 77.0,
+            "y": 22.5,
+            "width": 1.8,
+            "throughput_per_sec": 2.0,
+            "is_wheelchair_accessible": true,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          },
+          {
+            "id": "exit_south_emergency",
+            "floor_id": "floor_c",
+            "name": "Exit C: South Stair Exit",
+            "x": 40.0,
+            "y": 43.0,
+            "width": 2.0,
+            "throughput_per_sec": 1.8,
+            "is_wheelchair_accessible": false,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          },
+          {
+            "id": "exit_west_ramp",
+            "floor_id": "floor_c",
+            "name": "Exit D: West Accessible Ramp",
+            "x": 3.0,
+            "y": 22.5,
+            "width": 2.4,
+            "throughput_per_sec": 2.5,
+            "is_wheelchair_accessible": true,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          }
+        ],
+        "stairwells": [
+          {
+            "id": "stair_south",
+            "from_floor": "floor_c",
+            "to_floor": "floor_2",
+            "x": 37.0,
+            "y": 41.0,
+            "width": 1.8,
+            "throughput_per_sec": 1.5,
+            "is_wheelchair_accessible": false
+          }
+        ]
+      }
+    ]
+  },
+  "hazard_sources": [
+    {
+      "id": "fire_north_lobby",
+      "floor_id": "floor_c",
+      "x": 40.0,
+      "y": 8.0,
+      "hazard_type": "smoke",
+      "start_time_sec": 5.0,
+      "growth_rate": 0.25,
+      "max_radius": 22.0,
+      "intensity": 1.0
+    }
+  ],
+  "spawn_zones": [
+    {
+      "id": "sp_boardroom",
+      "floor_id": "floor_c",
+      "name": "Boardrooms & North Suites",
+      "bounds": {
+        "x": 10.0,
+        "y": 6.0,
+        "width": 55.0,
+        "height": 8.0
+      },
+      "occupant_count": 60,
+      "wheelchair_ratio": 0.06,
+      "reduced_mobility_ratio": 0.1
+    },
+    {
+      "id": "sp_central",
+      "floor_id": "floor_c",
+      "name": "Central Offices",
+      "bounds": {
+        "x": 15.0,
+        "y": 20.0,
+        "width": 50.0,
+        "height": 8.0
+      },
+      "occupant_count": 60,
+      "wheelchair_ratio": 0.08,
+      "reduced_mobility_ratio": 0.1
+    },
+    {
+      "id": "sp_south",
+      "floor_id": "floor_c",
+      "name": "South Suites",
+      "bounds": {
+        "x": 10.0,
+        "y": 32.0,
+        "width": 55.0,
+        "height": 8.0
+      },
+      "occupant_count": 40,
+      "wheelchair_ratio": 0.06,
+      "reduced_mobility_ratio": 0.12
+    }
+  ],
+  "events": [],
+  "total_occupants": 160,
+  "default_seed": 303,
+  "algorithm_weights": {
+    "w_distance": 1.0,
+    "w_congestion": 2.0,
+    "w_queue": 2.5,
+    "w_hazard": 8.0,
+    "w_reroute": 5.0,
+    "w_accessibility": 1000.0,
+    "hysteresis_threshold": 0.2,
+    "replan_interval_sec": 4.0,
+    "prediction_horizon_sec": 20.0
+  }
+}

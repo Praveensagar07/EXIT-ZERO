@@ -1,0 +1,50 @@
+# EXIT-ZERO Experimental Benchmark Export
+# Scenario ID,scenario_mixed_mobility
+# Scenario Name,Scenario D: Mixed Mobility with Restricted Stair Access
+# Occupants (N),140
+# Sample Size (Seeds),20
+# Evidence Tier,replicated
+# Uncertainty Note,"At least 20 completed paired seeds; report effect size, interval, and p-value together."
+# Timestamp,2026-11-11T08:55:52.475311+00:00
+
+SUMMARY_STATISTICS
+Metric,Baseline,Adaptive (EXIT-ZERO),Delta (Baseline - Adapt),Relative % Improvement
+Mean Total Evacuation Time (s),68.9,70.47,-1.57,-2.28%
+Median Total Evacuation Time (s),69.0,70.25,0.0,N/A
+Std Dev Evacuation Time (s),3.21,2.9,N/A,N/A
+95% Bootstrap CI for Delta (s),,,"[-2.78, -0.57]",
+Permutation Test p-value,,,0.0078,Statistically Significant: NO
+Wins / Losses / Ties,Baseline Wins: 8,Adaptive Wins: 0,Ties: 12,
+Mean Peak Queue Reduction,,,3.25,occupants
+Mean Peak Density Reduction,,,0.0,pers/m²
+Mean Waiting Time Reduction,,,0.42,seconds
+Mean Hazard Exposure Reduction,,,0.0,dosage
+Mean Adaptive Reroutes,,,6.05,reroutes/trial
+Mean Wheelchair Evacuation Time (s),48.44,49.08,-0.64,positive delta favors EXIT-ZERO
+Total Wall Benchmark Time (s),,,381.873,
+"Peak Python Heap (MB, tracemalloc)",,,3.32,
+"Peak Process RSS (MB, sampled)",,,64.53,
+Memory Measurement Note,,,Python heap is measured by tracemalloc; process RSS is sampled with psutil at simulation-step boundaries.,
+
+PER_SEED_TRIAL_DATA
+Seed,Winner,Base_Evac_Time_s,Adapt_Evac_Time_s,Delta_Time_s,Rel_Time_Imp_Pct,Base_Median_Time_s,Adapt_Median_Time_s,Base_Peak_Queue,Adapt_Peak_Queue,Delta_Peak_Queue,Base_Peak_Density,Adapt_Peak_Density,Delta_Peak_Density,Base_Wait_Time_s,Adapt_Wait_Time_s,Base_Hazard_Exposure,Adapt_Hazard_Exposure,Adapt_Reroutes,Base_Wheelchair_Mean_Evac_Time_s,Adapt_Wheelchair_Mean_Evac_Time_s,Delta_Wheelchair_Mean_Evac_Time_s,Base_Wall_ms,Adapt_Wall_ms,Peak_Process_RSS_MB
+101,baseline,63.5,66.5,-3.0,-4.72,26.5,28.25,6,4,2,3.0,3.0,0.0,0.42,0.21,0.0,0.0,3,49.94,50.67,-0.73,3044.76,20867.13,63.91
+102,tie,73.0,73.0,0.0,0.0,27.0,28.0,5,5,0,3.0,3.0,0.0,0.29,0.16,0.0,0.0,6,50.32,50.78,-0.46,3050.24,19704.0,64.27
+103,baseline,71.0,72.0,-1.0,-1.41,28.25,30.75,8,3,5,4.0,4.0,0.0,0.75,0.2,0.0,0.0,5,48.09,49.38,-1.29,3625.7,22619.42,64.53
+104,baseline,67.0,71.0,-4.0,-5.97,27.0,28.5,10,6,4,5.0,5.0,0.0,1.16,0.3,0.0,0.0,7,47.64,48.36,-0.72,3558.85,21818.76,64.47
+105,tie,68.0,68.0,0.0,0.0,28.0,32.0,11,6,5,3.0,3.0,0.0,0.8,0.35,0.0,0.0,9,48.72,48.93,-0.21,3546.61,22840.47,64.47
+106,tie,69.5,69.5,0.0,0.0,27.0,29.25,5,1,4,3.0,3.0,0.0,0.36,0.09,0.0,0.0,6,49.5,50.53,-1.03,4193.63,18704.61,64.47
+107,baseline,68.0,76.5,-8.5,-12.5,26.25,30.0,7,7,0,3.0,3.0,0.0,0.45,0.24,0.0,0.0,7,47.41,47.91,-0.5,3103.15,18577.02,47.04
+108,tie,71.5,71.5,0.0,0.0,27.5,29.75,4,4,0,4.0,4.0,0.0,0.43,0.19,0.0,0.0,3,49.32,50.27,-0.95,3154.27,19099.43,41.03
+109,tie,70.0,70.0,0.0,0.0,27.5,30.5,2,2,0,3.0,3.0,0.0,0.19,0.09,0.0,0.0,6,46.68,47.28,-0.6,3242.59,19005.03,38.8
+110,tie,71.0,71.0,0.0,0.0,28.0,29.75,4,5,-1,4.0,4.0,0.0,0.38,0.25,0.0,0.0,5,48.88,49.58,-0.7,3096.64,18970.77,32.63
+111,tie,69.0,69.0,0.0,0.0,28.75,29.5,7,5,2,3.0,3.0,0.0,0.43,0.19,0.0,0.0,6,52.0,52.05,-0.05,3129.92,19547.49,32.45
+112,baseline,67.0,71.0,-4.0,-5.97,27.0,30.0,10,4,6,3.0,3.0,0.0,1.0,0.17,0.0,0.0,7,47.27,47.94,-0.67,3229.01,18381.29,32.29
+113,baseline,61.5,69.0,-7.5,-12.2,27.0,29.0,12,5,7,5.0,5.0,0.0,1.08,0.31,0.0,0.0,7,45.37,46.21,-0.84,3169.97,19076.53,32.49
+114,tie,70.5,70.5,0.0,0.0,28.0,30.25,11,5,6,2.0,2.0,0.0,1.2,0.33,0.0,0.0,9,48.91,49.78,-0.87,2801.8,13547.46,32.77
+115,baseline,73.0,75.5,-2.5,-3.42,27.5,29.0,11,3,8,2.0,2.0,0.0,0.94,0.21,0.0,0.0,3,50.44,51.52,-1.08,1472.21,8664.92,30.56
+116,tie,69.0,69.0,0.0,0.0,30.5,33.75,6,5,1,4.0,4.0,0.0,0.3,0.21,0.0,0.0,7,49.28,49.04,0.24,1461.72,10449.35,30.57
+117,tie,68.5,68.5,0.0,0.0,28.75,31.75,6,4,2,2.0,2.0,0.0,0.57,0.19,0.0,0.0,5,46.76,47.08,-0.32,1460.95,9149.38,29.65
+118,tie,64.0,64.0,0.0,0.0,27.5,30.25,9,6,3,3.0,3.0,0.0,0.75,0.39,0.0,0.0,8,46.42,47.14,-0.72,1577.59,8533.23,29.69
+119,tie,74.0,74.0,0.0,0.0,26.5,30.5,12,4,8,3.0,3.0,0.0,0.96,0.27,0.0,0.0,9,47.95,48.18,-0.23,1382.32,8589.82,29.69
+120,baseline,69.0,70.0,-1.0,-1.45,27.5,29.5,6,3,3,2.0,2.0,0.0,0.36,0.11,0.0,0.0,3,47.92,48.94,-1.02,1441.46,8912.69,29.73

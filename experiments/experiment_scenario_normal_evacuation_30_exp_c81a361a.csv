@@ -1,0 +1,32 @@
+# EXIT-ZERO Experimental Benchmark Export
+# Scenario ID,scenario_normal_evacuation
+# Scenario Name,Scenario 1: Normal Evacuation (All Exits Clear)
+# Occupants (N),30
+# Sample Size (Seeds),2
+# Evidence Tier,preliminary
+# Uncertainty Note,Fewer than 10 completed paired seeds; treat estimates and intervals as preliminary.
+# Timestamp,2026-11-11T09:58:53.198292+00:00
+
+SUMMARY_STATISTICS
+Metric,Baseline,Adaptive (EXIT-ZERO),Delta (Baseline - Adapt),Relative % Improvement
+Mean Total Evacuation Time (s),,,,N/A
+Median Total Evacuation Time (s),,,,N/A
+Std Dev Evacuation Time (s),,,N/A,N/A
+95% Bootstrap CI for Delta (s),,,"[None, None]",
+Permutation Test p-value,,,,Statistically Significant: NO
+Wins / Losses / Ties,Baseline Wins: 0,Adaptive Wins: 0,Ties: 2,
+Mean Peak Queue Reduction,,,-1.0,occupants
+Mean Peak Density Reduction,,,-0.04,pers/m²
+Mean Waiting Time Reduction,,,-0.1,seconds
+Mean Hazard Exposure Reduction,,,0.0,dosage
+Mean Adaptive Reroutes,,,0.0,reroutes/trial
+Mean Wheelchair Evacuation Time (s),,,,positive delta favors EXIT-ZERO
+Total Wall Benchmark Time (s),,,0.797,
+"Peak Python Heap (MB, tracemalloc)",,,1.04,
+"Peak Process RSS (MB, sampled)",,,96.46,
+Memory Measurement Note,,,Python heap is measured by tracemalloc; process RSS is sampled with psutil at simulation-step boundaries.,
+
+PER_SEED_TRIAL_DATA
+Seed,Winner,Base_Evac_Time_s,Adapt_Evac_Time_s,Delta_Time_s,Rel_Time_Imp_Pct,Base_Median_Time_s,Adapt_Median_Time_s,Base_Peak_Queue,Adapt_Peak_Queue,Delta_Peak_Queue,Base_Peak_Density,Adapt_Peak_Density,Delta_Peak_Density,Base_Wait_Time_s,Adapt_Wait_Time_s,Base_Hazard_Exposure,Adapt_Hazard_Exposure,Adapt_Reroutes,Base_Wheelchair_Mean_Evac_Time_s,Adapt_Wheelchair_Mean_Evac_Time_s,Delta_Wheelchair_Mean_Evac_Time_s,Base_Wall_ms,Adapt_Wall_ms,Peak_Process_RSS_MB
+301,tie,,,,,21.0,22.5,2,4,-2,0.42,0.5,-0.08,0.08,0.28,0.0,0.0,0,24.0,23.5,0.5,116.28,281.56,96.13
+302,tie,,,,,22.5,22.5,1,1,0,1.0,1.0,0.0,0.02,0.02,0.0,0.0,0,,,,111.12,285.41,96.46
