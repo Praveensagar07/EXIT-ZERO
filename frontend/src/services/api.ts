@@ -10,6 +10,7 @@ import type {
   Building,
   BuildingSummary,
   BuildingValidationReport,
+  BuildingEvacuationGuidance,
 } from '../types/simulation';
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '/api').replace(/\/$/, '');
@@ -105,6 +106,26 @@ export const api = {
     return res.json();
   },
 
+  async runSimulationToCompletion(sessionId: string, maxSteps: number = 400): Promise<SimulationState> {
+    let state = await this.getSimulationState(sessionId);
+    let steps = 0;
+    while (state.status === 'running' && steps < maxSteps) {
+      state = await this.stepSimulation(sessionId, 5, 0.5);
+      steps += 5;
+    }
+    return state;
+  },
+
+  async toggleExit(exitId: string): Promise<{ success: boolean; exit_id: string; is_blocked: boolean }> {
+    const res = await fetch(`${API_BASE}/simulation/toggle-exit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exit_id: exitId }),
+    });
+    if (!res.ok) throw new Error(`Failed to toggle exit: ${res.statusText}`);
+    return res.json();
+  },
+
   async toggleExitBlock(sessionId: string, exitId: string): Promise<SimulationState> {
     const res = await fetch(`${API_BASE}/simulation/${sessionId}/toggle-exit/${exitId}`, {
       method: 'POST',
@@ -123,27 +144,37 @@ export const api = {
     return res.json();
   },
 
+  async startExperiment(params: ExperimentRunRequest): Promise<ExperimentJobStatus> {
+    const res = await fetch(`${API_BASE}/experiments/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) throw new Error(`Failed to start experiment: ${res.statusText}`);
+    return res.json();
+  },
+
   async getExperimentStatus(jobId: string): Promise<ExperimentJobStatus> {
     const res = await fetch(`${API_BASE}/experiments/${jobId}/status`);
-    if (!res.ok) throw new Error(`Get experiment status failed: ${res.statusText}`);
+    if (!res.ok) throw new Error(`Failed to fetch experiment status: ${res.statusText}`);
     return res.json();
   },
 
   async getExperimentResults(jobId: string): Promise<ExperimentResult> {
     const res = await fetch(`${API_BASE}/experiments/${jobId}/results`);
-    if (!res.ok) throw new Error(`Get experiment results failed: ${res.statusText}`);
-    return res.json();
-  },
-
-  async getExperimentHistory(): Promise<ExperimentJobStatus[]> {
-    const res = await fetch(`${API_BASE}/experiments/history`);
-    if (!res.ok) throw new Error(`Get experiment history failed: ${res.statusText}`);
+    if (!res.ok) throw new Error(`Failed to fetch experiment results: ${res.statusText}`);
     return res.json();
   },
 
   async getSavedExperiment(scenarioId: string): Promise<ExperimentResult> {
     const res = await fetch(`${API_BASE}/experiments/saved/${encodeURIComponent(scenarioId)}`);
-    if (!res.ok) throw new Error(`Get saved experiment failed: ${res.statusText}`);
+    if (!res.ok) throw new Error(`Failed to fetch saved experiment: ${res.statusText}`);
+    return res.json();
+  },
+
+  async getExperimentHistory(): Promise<ExperimentJobStatus[]> {
+    const res = await fetch(`${API_BASE}/experiments/history`);
+    if (!res.ok) throw new Error(`Failed to fetch experiment history: ${res.statusText}`);
     return res.json();
   },
 
@@ -216,5 +247,38 @@ export const api = {
     });
     if (!res.ok) throw new Error(`Failed to run building simulation: ${res.statusText}`);
     return res.json();
+  },
+
+  async importGltfBuilding(params: {
+    name?: string;
+    bounds?: { min_x: number; max_x: number; min_y: number; max_y: number; min_z: number; max_z: number };
+    floors_count?: number;
+    raw_payload?: any;
+  }): Promise<BuildingSummary> {
+    const res = await fetch(`${API_BASE}/buildings/import-gltf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) throw new Error(`GLTF import failed: ${res.statusText}`);
+    return res.json();
+  },
+
+  async getGuidance(params?: {
+    scenario_id?: string;
+    session_id?: string;
+    algorithm?: string;
+  }): Promise<BuildingEvacuationGuidance> {
+    const res = await fetch(`${API_BASE}/guidance/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params || {}),
+    });
+    if (!res.ok) throw new Error(`Guidance generation failed: ${res.statusText}`);
+    return res.json();
+  },
+
+  getGuidanceReportUrl(sessionId: string): string {
+    return `${API_BASE}/guidance/report/${encodeURIComponent(sessionId)}`;
   },
 };

@@ -1,0 +1,527 @@
+{
+  "id": "bldg_9c942850",
+  "name": "Engineering Pavilion",
+  "description": "Imported 3D digital twin geometry (2 floors, 40.0m × 30.0m)",
+  "author": "EXIT-ZERO 3D Importer",
+  "version": "1.0",
+  "floors": [
+    {
+      "id": "floor_1",
+      "name": "F1 - Level 1",
+      "level": 1,
+      "elevation": 0.0,
+      "floor_height": 3.2,
+      "width": 40.0,
+      "height": 30.0,
+      "rooms": [
+        {
+          "id": "R-101",
+          "floor_id": "floor_1",
+          "name": "Level 1 Unit 1",
+          "bounds": {
+            "x": 5.0,
+            "y": 5.0,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "lobby",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-102",
+          "floor_id": "floor_1",
+          "name": "Level 1 Unit 2",
+          "bounds": {
+            "x": 13.75,
+            "y": 5.0,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-103",
+          "floor_id": "floor_1",
+          "name": "Level 1 Unit 3",
+          "bounds": {
+            "x": 22.5,
+            "y": 5.0,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "conference",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-104",
+          "floor_id": "floor_1",
+          "name": "Level 1 Unit 4",
+          "bounds": {
+            "x": 31.25,
+            "y": 5.0,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-105",
+          "floor_id": "floor_1",
+          "name": "Level 1 Unit 5",
+          "bounds": {
+            "x": 5.0,
+            "y": 22.5,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-106",
+          "floor_id": "floor_1",
+          "name": "Level 1 Unit 6",
+          "bounds": {
+            "x": 13.75,
+            "y": 22.5,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "conference",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-107",
+          "floor_id": "floor_1",
+          "name": "Level 1 Unit 7",
+          "bounds": {
+            "x": 22.5,
+            "y": 22.5,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-108",
+          "floor_id": "floor_1",
+          "name": "Level 1 Unit 8",
+          "bounds": {
+            "x": 31.25,
+            "y": 22.5,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        }
+      ],
+      "doorways": [
+        {
+          "id": "D-101",
+          "floor_id": "floor_1",
+          "x": 8.12,
+          "y": 12.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-101"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-102",
+          "floor_id": "floor_1",
+          "x": 16.88,
+          "y": 12.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-102"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-103",
+          "floor_id": "floor_1",
+          "x": 25.62,
+          "y": 12.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-103"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-104",
+          "floor_id": "floor_1",
+          "x": 34.38,
+          "y": 12.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-104"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-105",
+          "floor_id": "floor_1",
+          "x": 8.12,
+          "y": 22.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-105"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-106",
+          "floor_id": "floor_1",
+          "x": 16.88,
+          "y": 22.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-106"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-107",
+          "floor_id": "floor_1",
+          "x": 25.62,
+          "y": 22.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-107"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-108",
+          "floor_id": "floor_1",
+          "x": 34.38,
+          "y": 22.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-108"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        }
+      ],
+      "obstacles": [],
+      "exits": [
+        {
+          "id": "exit_north_imported",
+          "floor_id": "floor_1",
+          "name": "North Portal Exit",
+          "x": 20.0,
+          "y": 2.0,
+          "width": 3.2,
+          "throughput_per_sec": 3.2,
+          "is_wheelchair_accessible": true,
+          "is_blocked": false,
+          "current_queue": 0,
+          "total_exited": 0
+        },
+        {
+          "id": "exit_south_imported",
+          "floor_id": "floor_1",
+          "name": "South Wing Exit",
+          "x": 20.0,
+          "y": 28.0,
+          "width": 2.4,
+          "throughput_per_sec": 2.4,
+          "is_wheelchair_accessible": true,
+          "is_blocked": false,
+          "current_queue": 0,
+          "total_exited": 0
+        }
+      ],
+      "stairwells": [
+        {
+          "id": "stair_east_1_2",
+          "from_floor": "floor_1",
+          "to_floor": "floor_2",
+          "x": 32.0,
+          "y": 12.5,
+          "width": 1.8,
+          "throughput_per_sec": 1.8,
+          "is_wheelchair_accessible": false,
+          "is_ramp": false,
+          "target_x": 32.0,
+          "target_y": 17.5
+        },
+        {
+          "id": "ramp_west_1_2",
+          "from_floor": "floor_1",
+          "to_floor": "floor_2",
+          "x": 8.0,
+          "y": 12.5,
+          "width": 2.4,
+          "throughput_per_sec": 2.4,
+          "is_wheelchair_accessible": true,
+          "is_ramp": true,
+          "target_x": 8.0,
+          "target_y": 17.5
+        }
+      ]
+    },
+    {
+      "id": "floor_2",
+      "name": "F2 - Level 2",
+      "level": 2,
+      "elevation": 3.2,
+      "floor_height": 3.2,
+      "width": 40.0,
+      "height": 30.0,
+      "rooms": [
+        {
+          "id": "R-201",
+          "floor_id": "floor_2",
+          "name": "Level 2 Unit 1",
+          "bounds": {
+            "x": 5.0,
+            "y": 5.0,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-202",
+          "floor_id": "floor_2",
+          "name": "Level 2 Unit 2",
+          "bounds": {
+            "x": 13.75,
+            "y": 5.0,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-203",
+          "floor_id": "floor_2",
+          "name": "Level 2 Unit 3",
+          "bounds": {
+            "x": 22.5,
+            "y": 5.0,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "conference",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-204",
+          "floor_id": "floor_2",
+          "name": "Level 2 Unit 4",
+          "bounds": {
+            "x": 31.25,
+            "y": 5.0,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-205",
+          "floor_id": "floor_2",
+          "name": "Level 2 Unit 5",
+          "bounds": {
+            "x": 5.0,
+            "y": 22.5,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-206",
+          "floor_id": "floor_2",
+          "name": "Level 2 Unit 6",
+          "bounds": {
+            "x": 13.75,
+            "y": 22.5,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "conference",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-207",
+          "floor_id": "floor_2",
+          "name": "Level 2 Unit 7",
+          "bounds": {
+            "x": 22.5,
+            "y": 22.5,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        },
+        {
+          "id": "R-208",
+          "floor_id": "floor_2",
+          "name": "Level 2 Unit 8",
+          "bounds": {
+            "x": 31.25,
+            "y": 22.5,
+            "width": 6.25,
+            "height": 7.5
+          },
+          "room_type": "office",
+          "max_capacity": 11,
+          "height": 3.2,
+          "is_accessible": true
+        }
+      ],
+      "doorways": [
+        {
+          "id": "D-201",
+          "floor_id": "floor_2",
+          "x": 8.12,
+          "y": 12.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-201"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-202",
+          "floor_id": "floor_2",
+          "x": 16.88,
+          "y": 12.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-202"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-203",
+          "floor_id": "floor_2",
+          "x": 25.62,
+          "y": 12.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-203"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-204",
+          "floor_id": "floor_2",
+          "x": 34.38,
+          "y": 12.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-204"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-205",
+          "floor_id": "floor_2",
+          "x": 8.12,
+          "y": 22.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-205"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-206",
+          "floor_id": "floor_2",
+          "x": 16.88,
+          "y": 22.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-206"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-207",
+          "floor_id": "floor_2",
+          "x": 25.62,
+          "y": 22.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-207"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        },
+        {
+          "id": "D-208",
+          "floor_id": "floor_2",
+          "x": 34.38,
+          "y": 22.5,
+          "width": 1.2,
+          "connects_rooms": [
+            "R-208"
+          ],
+          "is_open": true,
+          "is_emergency_exit": false
+        }
+      ],
+      "obstacles": [],
+      "exits": [],
+      "stairwells": []
+    }
+  ]
+}

@@ -17,6 +17,8 @@ import { TopNavBar, type PrimaryView } from './components/TopNavBar';
 import { BuildingViewport3D, type ViewMode3D } from './components/BuildingViewport3D';
 import { FloorPlanViewport } from './components/FloorPlanViewport';
 import { BuildingStudio } from './components/BuildingStudio';
+import { EvacuationGuidancePanel } from './components/EvacuationGuidancePanel';
+import { BuildingImportWizard } from './components/BuildingImportWizard';
 import {
   Play,
   Pause,
@@ -29,6 +31,8 @@ import {
   ChevronDown,
   Eye,
   Accessibility,
+  Compass,
+  Upload,
 } from 'lucide-react';
 
 const ExperimentsDashboard = lazy(() =>
@@ -46,6 +50,7 @@ export function App() {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [isScenariosModalOpen, setIsScenariosModalOpen] = useState<boolean>(false);
+  const [isImportWizardOpen, setIsImportWizardOpen] = useState<boolean>(false);
 
   // Scenarios & Building
   const [scenarios, setScenarios] = useState<ScenarioSummary[]>([]);
@@ -356,6 +361,18 @@ export function App() {
           </button>
 
           <button
+            onClick={() => setActiveView('guidance')}
+            title="Evacuation Guidance"
+            className={`p-2.5 rounded-lg transition-colors ${
+              activeView === 'guidance'
+                ? 'bg-[#E6F4F2] text-[#167D73]'
+                : 'text-[#647078] hover:text-[#242A30] hover:bg-[#F9FAFB]'
+            }`}
+          >
+            <Compass className="w-5 h-5" />
+          </button>
+
+          <button
             onClick={() => setIsScenariosModalOpen(true)}
             title="Scenarios Library"
             className={`p-2.5 rounded-lg transition-colors ${
@@ -380,7 +397,10 @@ export function App() {
 
         {/* 3. Primary Center Workspace depending on activeView */}
         {activeView === 'studio' ? (
-          <BuildingStudio onRunSimulation={handleRunCustomBuilding} />
+          <BuildingStudio
+            onRunSimulation={handleRunCustomBuilding}
+            onOpenImportWizard={() => setIsImportWizardOpen(true)}
+          />
         ) : activeView === 'evidence' ? (
           <div className="flex-1 overflow-y-auto bg-[#FAFAF8] p-6">
               <Suspense fallback={<div className="p-10 text-center text-sm text-[#647078]">Loading Evidence Lab...</div>}>
@@ -390,6 +410,25 @@ export function App() {
                 />
               </Suspense>
           </div>
+        ) : activeView === 'guidance' ? (
+          <EvacuationGuidancePanel
+            scenarioId={selectedScenarioId}
+            sessionId={sessionId || undefined}
+            algorithm={algorithm}
+            onSelectOccupant={(occId) => {
+              setActiveView('simulation');
+              setFollowOccupantId(occId);
+              const targetOcc = occupants.find((o) => o.id === occId);
+              if (targetOcc) {
+                setSelectedElement({
+                  type: 'occupant',
+                  id: occId,
+                  floorId: targetOcc.floor_id,
+                  data: targetOcc,
+                });
+              }
+            }}
+          />
         ) : (
           /* Live Simulation Workspace matching Image 2 */
           <div className="flex flex-1 min-w-0 overflow-hidden">
@@ -414,6 +453,13 @@ export function App() {
                   </select>
                   <ChevronDown className="w-3.5 h-3.5 text-[#647078] absolute right-2.5 top-3 pointer-events-none" />
                 </div>
+                <button
+                  onClick={() => setIsImportWizardOpen(true)}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white hover:bg-[#F9FAFB] border border-[#E5E7EB] text-[#242A30] rounded-md text-xs font-medium shadow-xs transition-colors mt-2"
+                >
+                  <Upload className="w-3.5 h-3.5 text-[#167D73]" />
+                  <span>Import 3D Building</span>
+                </button>
               </div>
 
               {/* Floors (N) List */}
@@ -1218,6 +1264,21 @@ export function App() {
           </div>
         </div>
       )}
+      {/* Building Import Wizard Modal */}
+      <BuildingImportWizard
+        isOpen={isImportWizardOpen}
+        onClose={() => setIsImportWizardOpen(false)}
+        onImportComplete={(_summary, action) => {
+          setIsImportWizardOpen(false);
+          if (action === 'studio') {
+            setActiveView('studio');
+          } else {
+            setActiveView('simulation');
+          }
+          // Refresh buildings
+          api.getBuildings().catch(console.error);
+        }}
+      />
     </div>
   );
 }

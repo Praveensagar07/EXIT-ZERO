@@ -829,8 +829,16 @@ class SimulationEngine:
 
             occ.movement_speed = effective_speed
 
-            target_z = getattr(target_node, "z", 0.0)
-            occ_z = getattr(occ, "z", 0.0)
+            target_z = getattr(target_node, "z", None)
+            if target_z is None:
+                floor_elem = next((f for f in self.scenario.building.floors if f.id == target_node.floor_id), None)
+                target_z = getattr(floor_elem, "elevation", 0.0) if floor_elem else 0.0
+
+            occ_z = getattr(occ, "z", None)
+            if occ_z is None:
+                floor_elem = next((f for f in self.scenario.building.floors if f.id == occ.floor_id), None)
+                occ_z = getattr(floor_elem, "elevation", 0.0) if floor_elem else 0.0
+                occ.z = occ_z
             dx = target_node.x - occ.x
             dy = target_node.y - occ.y
             dz = target_z - occ_z

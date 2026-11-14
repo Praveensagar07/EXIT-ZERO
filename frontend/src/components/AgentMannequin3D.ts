@@ -47,6 +47,7 @@ const GEO_HEAD = new THREE.SphereGeometry(0.12, 10, 8);
 const GEO_TORSO = new THREE.BoxGeometry(0.34, 0.46, 0.20);
 const GEO_UPPER_LEG = new THREE.BoxGeometry(0.11, 0.38, 0.12);
 const GEO_LOWER_LEG = new THREE.BoxGeometry(0.10, 0.38, 0.11);
+const GEO_FOOT = new THREE.BoxGeometry(0.11, 0.06, 0.20);
 const GEO_ARM = new THREE.BoxGeometry(0.09, 0.44, 0.09);
 
 // Wheelchair Geometries
@@ -74,29 +75,32 @@ export interface AgentRig {
   lastY: number;
   lastZ: number;
   currentSpeed: number;
+  targetPos: THREE.Vector3;
+  targetHeading: number;
+  isInitialized: boolean;
 }
 
 /**
  * Creates a low-poly articulated human mannequin.
- * Proportions: ~1.75m total height, standing naturally.
+ * Proportions: ~1.75m total height, standing naturally with soles at exactly y=0.00.
  */
 export function createAmbulatoryMannequin(occId: string): AgentRig {
   const root = new THREE.Group();
   root.name = `agent_${occId}`;
 
-  // Pelvis / Torso Anchor
+  // Pelvis / Torso Anchor (center at 1.08m)
   const torsoMesh = new THREE.Mesh(GEO_TORSO, MAT_AMBULATORY);
   torsoMesh.position.set(0, 1.08, 0);
   torsoMesh.castShadow = true;
   root.add(torsoMesh);
 
-  // Head
+  // Head (center at 1.45m)
   const headMesh = new THREE.Mesh(GEO_HEAD, MAT_AMBULATORY);
   headMesh.position.set(0, 1.45, 0);
   headMesh.castShadow = true;
   root.add(headMesh);
 
-  // Left Leg Pivot (at hip joint)
+  // Left Leg Pivot (at hip joint y=0.82)
   const leftLeg = new THREE.Group();
   leftLeg.position.set(-0.10, 0.82, 0);
 
@@ -106,12 +110,19 @@ export function createAmbulatoryMannequin(occId: string): AgentRig {
   leftLeg.add(leftUpperLeg);
 
   const leftLowerLeg = new THREE.Mesh(GEO_LOWER_LEG, MAT_AMBULATORY);
-  leftLowerLeg.position.set(0, -0.56, 0);
+  leftLowerLeg.position.set(0, -0.55, 0);
   leftLowerLeg.castShadow = true;
   leftLeg.add(leftLowerLeg);
+
+  // Foot sole precisely rests on floor surface (y=0.00 in root space)
+  const leftFoot = new THREE.Mesh(GEO_FOOT, MAT_AMBULATORY);
+  leftFoot.position.set(0, -0.79, 0.04);
+  leftFoot.castShadow = true;
+  leftLeg.add(leftFoot);
+
   root.add(leftLeg);
 
-  // Right Leg Pivot (at hip joint)
+  // Right Leg Pivot (at hip joint y=0.82)
   const rightLeg = new THREE.Group();
   rightLeg.position.set(0.10, 0.82, 0);
 
@@ -121,12 +132,19 @@ export function createAmbulatoryMannequin(occId: string): AgentRig {
   rightLeg.add(rightUpperLeg);
 
   const rightLowerLeg = new THREE.Mesh(GEO_LOWER_LEG, MAT_AMBULATORY);
-  rightLowerLeg.position.set(0, -0.56, 0);
+  rightLowerLeg.position.set(0, -0.55, 0);
   rightLowerLeg.castShadow = true;
   rightLeg.add(rightLowerLeg);
+
+  // Foot sole precisely rests on floor surface (y=0.00 in root space)
+  const rightFoot = new THREE.Mesh(GEO_FOOT, MAT_AMBULATORY);
+  rightFoot.position.set(0, -0.79, 0.04);
+  rightFoot.castShadow = true;
+  rightLeg.add(rightFoot);
+
   root.add(rightLeg);
 
-  // Left Arm Pivot (at shoulder joint)
+  // Left Arm Pivot (at shoulder joint y=1.26)
   const leftArm = new THREE.Group();
   leftArm.position.set(-0.23, 1.26, 0);
 
@@ -136,7 +154,7 @@ export function createAmbulatoryMannequin(occId: string): AgentRig {
   leftArm.add(leftArmMesh);
   root.add(leftArm);
 
-  // Right Arm Pivot (at shoulder joint)
+  // Right Arm Pivot (at shoulder joint y=1.26)
   const rightArm = new THREE.Group();
   rightArm.position.set(0.23, 1.26, 0);
 
@@ -158,12 +176,15 @@ export function createAmbulatoryMannequin(occId: string): AgentRig {
     lastY: 0,
     lastZ: 0,
     currentSpeed: 0,
+    targetPos: new THREE.Vector3(),
+    targetHeading: 0,
+    isInitialized: false,
   };
 }
 
 /**
  * Creates a detailed low-poly wheelchair and seated human occupant.
- * Proportions: ~1.25m seated height, recognizable wheelchair geometry.
+ * Proportions: ~1.25m seated height, recognizable wheelchair geometry, bottom of tires on y=0.00.
  */
 export function createWheelchairFigure(occId: string): AgentRig {
   const root = new THREE.Group();
@@ -185,7 +206,7 @@ export function createWheelchairFigure(occId: string): AgentRig {
   footrest.castShadow = true;
   root.add(footrest);
 
-  // Large Drive Wheels (Left & Right)
+  // Large Drive Wheels (Left & Right): radius 0.328m, centered at y=0.32m -> bottom rests on y=0.00
   const leftWheel = new THREE.Mesh(GEO_WC_BIG_WHEEL, MAT_WHEELCHAIR_TIRE);
   leftWheel.position.set(-0.29, 0.32, -0.04);
   leftWheel.rotation.y = Math.PI / 2;
@@ -206,7 +227,7 @@ export function createWheelchairFigure(occId: string): AgentRig {
   rightWheel.add(rightHub);
   root.add(rightWheel);
 
-  // Front Casters
+  // Front Casters: radius 0.05m at y=0.05m -> bottom at y=0.00
   const leftCaster = new THREE.Mesh(GEO_WC_CASTER, MAT_WHEELCHAIR_TIRE);
   leftCaster.position.set(-0.20, 0.05, 0.24);
   leftCaster.rotation.z = Math.PI / 2;
@@ -262,6 +283,9 @@ export function createWheelchairFigure(occId: string): AgentRig {
     lastY: 0,
     lastZ: 0,
     currentSpeed: 0,
+    targetPos: new THREE.Vector3(),
+    targetHeading: 0,
+    isInitialized: false,
   };
 }
 
@@ -282,7 +306,11 @@ export function updateAgentMaterials(
 
   rig.root.traverse((child) => {
     if (child instanceof THREE.Mesh) {
-      if (child.material === MAT_AMBULATORY || child.material === MAT_AMBULATORY_SELECTED || child.material === MAT_AMBULATORY_TRAPPED) {
+      if (
+        child.material === MAT_AMBULATORY ||
+        child.material === MAT_AMBULATORY_SELECTED ||
+        child.material === MAT_AMBULATORY_TRAPPED
+      ) {
         child.material = targetMat;
       }
     }

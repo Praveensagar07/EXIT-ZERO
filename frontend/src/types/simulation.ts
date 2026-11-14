@@ -423,3 +423,63 @@ export interface ExperimentJobStatus {
   error?: string | null;
   result?: ExperimentResult | null;
 }
+
+
+export interface RoomGuidance {
+  roomId: string;
+  roomName: string;
+  floorId: string;
+  floorName: string;
+  primaryExitId: string;
+  primaryExitName: string;
+  alternativeExitId: string;
+  alternativeExitName: string;
+  routeDistanceMeters: number;
+  estimatedEgressTimeSec: number;
+  status: 'clear' | 'congested' | 'hazard_blocked';
+  isWheelchairAccessible: boolean;
+  maxCapacity: number;
+}
+
+export interface FloorGuidance {
+  floorId: string;
+  floorName: string;
+  level: number;
+  occupantCount: number;
+  evacuatedCount: number;
+  activeEvacuees: number;
+  evacuationProgressPercent: number;
+  activeExits: string[];
+  recommendedStairs: string[];
+  recommendedRamps: string[];
+  hazardRisk: 'low' | 'moderate' | 'high' | 'critical';
+  rooms: RoomGuidance[];
+}
+
+export interface OccupantGuidance {
+  occupantId: string;
+  mobilityCategory: string;
+  currentFloorId: string;
+  targetExitId: string;
+  targetExitName: string;
+  distanceRemainingMeters: number;
+  estimatedArrivalSec: number;
+  turnByTurnInstructions: string[];
+  rerouteExplanation?: string | null;
+}
+
+export interface BuildingEvacuationGuidance {
+  buildingId: string;
+  buildingName: string;
+  timestamp: string;
+  totalOccupants: number;
+  evacuatedOccupants: number;
+  overallProgressPercent: number;
+  estimatedClearanceTimeSec: number;
+  bottleneckRiskIndex: number;
+  egressReadinessRating: 'optimal' | 'good' | 'constrained' | 'hazardous';
+  floors: FloorGuidance[];
+  rooms: RoomGuidance[];
+  occupantsGuidance: OccupantGuidance[];
+  emergencyActionChecklist: string[];
+}

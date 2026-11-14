@@ -37,9 +37,10 @@ import {
 
 interface BuildingStudioProps {
   onRunSimulation?: (buildingId: string) => void;
+  onOpenImportWizard?: () => void;
 }
 
-export const BuildingStudio: React.FC<BuildingStudioProps> = ({ onRunSimulation }) => {
+export const BuildingStudio: React.FC<BuildingStudioProps> = ({ onRunSimulation, onOpenImportWizard }) => {
   const [buildings, setBuildings] = useState<BuildingSummary[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>('bldg_multifloor_demo');
   const [currentBuilding, setCurrentBuilding] = useState<Building | null>(null);
@@ -280,9 +281,16 @@ export const BuildingStudio: React.FC<BuildingStudioProps> = ({ onRunSimulation 
             <Plus className="w-3.5 h-3.5" />
             New Building
           </button>
+          <button
+            onClick={() => onOpenImportWizard?.()}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#242A30] bg-white hover:bg-[#F3F4F6] border border-[#E5E7EB] rounded shadow-sm transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5 text-[#167D73]" />
+            Import 3D / CAD
+          </button>
           <label className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#242A30] bg-white hover:bg-[#F3F4F6] border border-[#E5E7EB] rounded shadow-sm cursor-pointer transition-colors">
             <Upload className="w-3.5 h-3.5" />
-            Import
+            Import JSON
             <input type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
           </label>
           <button

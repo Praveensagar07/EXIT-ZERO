@@ -1,6 +1,8 @@
+from app.simulation.guidance import generate_building_guidance, format_guidance_markdown
+from app.simulation.importer import import_gltf_or_cad_mesh, import_scenario_json
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
@@ -550,3 +552,54 @@ def download_experiment_json(job_id: str):
 @router.get("/experiments/history", response_model=List[ExperimentJobStatus])
 def list_experiment_history():
     return job_manager.list_jobs()
+
+
+class GuidanceRequest(BaseModel):
+    scenario_id: Optional[str] = "scenario_multifloor_demo"
+    session_id: Optional[str] = None
+    algorithm: Optional[str] = "adaptive"
+
+
+class ImportGLTFRequest(BaseModel):
+    name: Optional[str] = "Imported 3D CAD/GLTF Model"
+    bounds: Optional[Dict[str, float]] = None
+    floors_count: Optional[int] = 3
+    raw_payload: Optional[Dict[str, Any]] = None
+
+
+@router.post("/buildings/import-gltf", response_model=BuildingSummary)
+def import_gltf_building(req: ImportGLTFRequest):
+    data = {"name": req.name, "bounds": req.bounds}
+    if req.raw_payload:
+        data.update(req.raw_payload)
+    b = import_gltf_or_cad_mesh(data)
+    file_path = _CUSTOM_BUILDINGS_DIR / f"{b.id}.json"
+    file_path.write_text(b.model_dump_json(indent=2), encoding="utf-8")
+    return _summarize_building(b, is_custom=True)
+
+
+@router.post("/guidance/generate")
+def get_guidance(req: GuidanceRequest):
+    engine = None
+    if req.session_id and req.session_id in active_sessions:
+        engine = active_sessions[req.session_id]
+    else:
+        scen_id = req.scenario_id or "scenario_multifloor_demo"
+        if scen_id not in SCENARIO_REGISTRY:
+            scen_id = "scenario_multifloor_demo"
+        scen = SCENARIO_REGISTRY[scen_id]
+        from app.models.scenario import AlgorithmType
+        algo = AlgorithmType.ADAPTIVE if (req.algorithm or "").lower() == "adaptive" else AlgorithmType.BASELINE
+        engine = SimulationEngine(scenario_config=scen, algorithm=algo, seed=42)
+        active_sessions[engine.session_id] = engine
+
+    return generate_building_guidance(engine)
+
+
+@router.get("/guidance/report/{session_id}")
+def get_guidance_report(session_id: str):
+    if session_id not in active_sessions:
+        raise HTTPException(status_code=404, detail=f"Simulation session '{session_id}' not found.")
+    guidance = generate_building_guidance(active_sessions[session_id])
+    md = format_guidance_markdown(guidance)
+    return PlainTextResponse(content=md, media_type="text/markdown")

@@ -8,9 +8,16 @@ import {
   User,
   WifiOff,
   Sparkles,
+  Compass,
 } from 'lucide-react';
 
-export type PrimaryView = 'simulation' | 'studio' | 'evidence' | 'scenarios' | 'settings';
+export type PrimaryView =
+  | 'simulation'
+  | 'studio'
+  | 'evidence'
+  | 'guidance'
+  | 'scenarios'
+  | 'settings';
 
 interface TopNavBarProps {
   activeView: PrimaryView;
@@ -84,6 +91,18 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         >
           <Building2 className="w-3.5 h-3.5" />
           <span>Building Studio</span>
+        </button>
+
+        <button
+          onClick={() => onChangeView('guidance')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            activeView === 'guidance'
+              ? 'bg-[#E6F4F2] text-[#167D73] font-semibold'
+              : 'text-[#647078] hover:text-[#242A30] hover:bg-[#F9FAFB]'
+          }`}
+        >
+          <Compass className="w-3.5 h-3.5" />
+          <span>Guidance</span>
         </button>
 
         <button
