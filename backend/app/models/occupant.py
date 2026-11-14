@@ -22,6 +22,7 @@ class Occupant(BaseModel):
     floor_id: str
     x: float
     y: float
+    z: float = 0.0
     current_node_id: str
     target_exit_id: Optional[str] = None
     movement_speed: float = 1.35   # current speed in m/s

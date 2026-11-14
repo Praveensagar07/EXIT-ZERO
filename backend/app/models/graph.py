@@ -17,6 +17,7 @@ class GraphNode(BaseModel):
     floor_id: str
     x: float
     y: float
+    z: float = 0.0
     node_type: NodeType
     room_id: Optional[str] = None
     is_accessible: bool = True  # True if wheelchair-accessible

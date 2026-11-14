@@ -2,10 +2,11 @@
 
 @layer base {
   :root {
-    --bg-surface: #f8fafc;
-    --text-primary: #0f172a;
-    --text-muted: #64748b;
-    --border-color: #e2e8f0;
+    --bg-surface: #fafaf8;
+    --text-primary: #242a30;
+    --text-muted: #647078;
+    --border-color: #e5e7eb;
+    --accent-teal: #167d73;
   }
 
   body {
@@ -27,7 +28,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid #34d399;
+    outline: 2px solid var(--accent-teal);
   }
 
   @media (prefers-reduced-motion: reduce) {

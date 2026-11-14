@@ -23,6 +23,7 @@ class BuildingGraphGenerator:
         G = nx.Graph()
         nodes: Dict[str, GraphNode] = {}
         edges: List[GraphEdge] = []
+        floor_z = round(getattr(floor, "elevation", 0.0), 2)
 
         # 1. Add Room Center Nodes
         for room in floor.rooms:
@@ -34,9 +35,10 @@ class BuildingGraphGenerator:
                 floor_id=floor.id,
                 x=round(center_x, 2),
                 y=round(center_y, 2),
+                z=floor_z,
                 node_type=NodeType.ROOM_CENTER,
                 room_id=room.id,
-                is_accessible=True,
+                is_accessible=getattr(room, "is_accessible", True),
                 label=room.name,
             )
             nodes[node_id] = node
@@ -44,10 +46,11 @@ class BuildingGraphGenerator:
                 node_id,
                 x=node.x,
                 y=node.y,
+                z=node.z,
                 floor_id=floor.id,
                 node_type=node.node_type.value,
                 room_id=room.id,
-                is_accessible=True,
+                is_accessible=node.is_accessible,
                 label=room.name,
             )
 
@@ -61,6 +64,7 @@ class BuildingGraphGenerator:
                 floor_id=floor.id,
                 x=round(door.x, 2),
                 y=round(door.y, 2),
+                z=floor_z,
                 node_type=NodeType.DOORWAY,
                 is_accessible=door.width >= 0.9,  # ADA standard: >=0.9m for wheelchair accessibility
                 label=f"Door {door.id}",
@@ -70,6 +74,7 @@ class BuildingGraphGenerator:
                 node_id,
                 x=node.x,
                 y=node.y,
+                z=node.z,
                 floor_id=floor.id,
                 node_type=node.node_type.value,
                 is_accessible=node.is_accessible,
@@ -119,6 +124,7 @@ class BuildingGraphGenerator:
                 floor_id=floor.id,
                 x=round(exit_elem.x, 2),
                 y=round(exit_elem.y, 2),
+                z=floor_z,
                 node_type=NodeType.EXIT,
                 is_accessible=exit_elem.is_wheelchair_accessible,
                 label=exit_elem.name,
@@ -128,6 +134,7 @@ class BuildingGraphGenerator:
                 node_id,
                 x=node.x,
                 y=node.y,
+                z=node.z,
                 floor_id=floor.id,
                 node_type=node.node_type.value,
                 is_accessible=node.is_accessible,
@@ -145,6 +152,7 @@ class BuildingGraphGenerator:
                     c_node.id,
                     x=c_node.x,
                     y=c_node.y,
+                    z=c_node.z,
                     floor_id=floor.id,
                     node_type=c_node.node_type.value,
                     is_accessible=c_node.is_accessible,
@@ -210,6 +218,227 @@ class BuildingGraphGenerator:
         nav_model = NavigationGraphModel(nodes=nodes, edges=edges)
         return G, nav_model
 
+    def generate_building_graph(self, building: Building) -> Tuple[nx.Graph, NavigationGraphModel]:
+        """
+        Builds a comprehensive, interconnected 3D spatial navigation graph spanning
+        all floors in a multi-story building, incorporating vertical transit connectors
+        (stairwells, accessible ramps) with true 3D Euclidean metrics and accessibility rules.
+        """
+        combined_G = nx.Graph()
+        all_nodes: Dict[str, GraphNode] = {}
+        all_edges: List[GraphEdge] = []
+
+        floor_map = {f.id: f for f in building.floors}
+
+        # 1. Generate individual floor subgraphs with floor elevations
+        for floor in building.floors:
+            G_floor, nav_floor = self.generate_floor_graph(floor)
+            for nid, node in nav_floor.nodes.items():
+                all_nodes[nid] = node
+                combined_G.add_node(
+                    nid,
+                    x=node.x,
+                    y=node.y,
+                    z=node.z,
+                    floor_id=node.floor_id,
+                    node_type=node.node_type.value,
+                    room_id=node.room_id,
+                    is_accessible=node.is_accessible,
+                    label=node.label,
+                )
+            for edge in nav_floor.edges:
+                all_edges.append(edge)
+                combined_G.add_edge(
+                    edge.u,
+                    edge.v,
+                    length=edge.length,
+                    width=edge.width,
+                    capacity_per_sec=edge.capacity_per_sec,
+                    wheelchair_accessible=edge.wheelchair_accessible,
+                    hazard_level=edge.hazard_level,
+                    current_occupants=edge.current_occupants,
+                    weight=edge.base_weight,
+                )
+
+        # 2. Inter-floor Vertical Connectors (Stairs & Ramps)
+        for floor in building.floors:
+            for stair in floor.stairwells:
+                from_fid = stair.from_floor
+                to_fid = stair.to_floor
+
+                if from_fid not in floor_map or to_fid not in floor_map:
+                    continue
+
+                from_fl = floor_map[from_fid]
+                to_fl = floor_map[to_fid]
+
+                z_from = getattr(from_fl, "elevation", 0.0)
+                z_to = getattr(to_fl, "elevation", 0.0)
+
+                x_from = stair.x
+                y_from = stair.y
+                x_to = stair.target_x if stair.target_x is not None else stair.x
+                y_to = stair.target_y if stair.target_y is not None else stair.y
+
+                landing_from_id = f"node_vertical_{stair.id}_{from_fid}"
+                landing_to_id = f"node_vertical_{stair.id}_{to_fid}"
+
+                is_wheelchair = bool(stair.is_wheelchair_accessible or stair.is_ramp)
+                connector_label = f"{'Ramp' if stair.is_ramp else 'Stair'} {stair.id}"
+
+                # Landing node on lower / from floor
+                landing_from = GraphNode(
+                    id=landing_from_id,
+                    floor_id=from_fid,
+                    x=round(x_from, 2),
+                    y=round(y_from, 2),
+                    z=round(z_from, 2),
+                    node_type=NodeType.STAIRWELL,
+                    is_accessible=is_wheelchair,
+                    label=f"{connector_label} (Level {from_fl.level})",
+                )
+                all_nodes[landing_from_id] = landing_from
+                combined_G.add_node(
+                    landing_from_id,
+                    x=landing_from.x,
+                    y=landing_from.y,
+                    z=landing_from.z,
+                    floor_id=from_fid,
+                    node_type=NodeType.STAIRWELL.value,
+                    is_accessible=is_wheelchair,
+                    label=landing_from.label,
+                )
+
+                # Landing node on upper / to floor
+                landing_to = GraphNode(
+                    id=landing_to_id,
+                    floor_id=to_fid,
+                    x=round(x_to, 2),
+                    y=round(y_to, 2),
+                    z=round(z_to, 2),
+                    node_type=NodeType.STAIRWELL,
+                    is_accessible=is_wheelchair,
+                    label=f"{connector_label} (Level {to_fl.level})",
+                )
+                all_nodes[landing_to_id] = landing_to
+                combined_G.add_node(
+                    landing_to_id,
+                    x=landing_to.x,
+                    y=landing_to.y,
+                    z=landing_to.z,
+                    floor_id=to_fid,
+                    node_type=NodeType.STAIRWELL.value,
+                    is_accessible=is_wheelchair,
+                    label=landing_to.label,
+                )
+
+                # Connect landings across floors with 3D transit length
+                transit_dist = math.hypot(x_to - x_from, y_to - y_from, z_to - z_from)
+                # Ensure minimum transit length reflects actual flight steps / ramp incline
+                min_flight = abs(z_to - z_from) * (2.8 if stair.is_ramp else 1.4)
+                effective_transit = max(max(1.0, min_flight), round(transit_dist, 2))
+
+                vert_edge = GraphEdge(
+                    u=landing_from_id,
+                    v=landing_to_id,
+                    length=effective_transit,
+                    width=stair.width,
+                    capacity_per_sec=stair.throughput_per_sec,
+                    wheelchair_accessible=is_wheelchair,
+                    hazard_level=0.0,
+                    current_occupants=0,
+                    base_weight=effective_transit,
+                )
+                all_edges.append(vert_edge)
+                combined_G.add_edge(
+                    landing_from_id,
+                    landing_to_id,
+                    length=vert_edge.length,
+                    width=vert_edge.width,
+                    capacity_per_sec=vert_edge.capacity_per_sec,
+                    wheelchair_accessible=vert_edge.wheelchair_accessible,
+                    hazard_level=0.0,
+                    current_occupants=0,
+                    weight=vert_edge.base_weight,
+                )
+
+                # Connect landing_from to nearest corridor or doorway node on from_floor
+                candidates_from = [
+                    nid for nid, nd in all_nodes.items()
+                    if nd.floor_id == from_fid and nd.id != landing_from_id
+                    and nd.node_type in [NodeType.CORRIDOR_JUNCTION, NodeType.CORRIDOR_WAYPOINT, NodeType.DOORWAY]
+                ]
+                if candidates_from:
+                    closest_from = min(
+                        candidates_from,
+                        key=lambda cid: math.hypot(all_nodes[cid].x - x_from, all_nodes[cid].y - y_from)
+                    )
+                    d_from = math.hypot(all_nodes[closest_from].x - x_from, all_nodes[closest_from].y - y_from)
+                    eff_d_from = max(0.5, round(d_from, 2))
+                    edge_from = GraphEdge(
+                        u=landing_from_id,
+                        v=closest_from,
+                        length=eff_d_from,
+                        width=stair.width,
+                        capacity_per_sec=stair.throughput_per_sec,
+                        wheelchair_accessible=is_wheelchair and all_nodes[closest_from].is_accessible,
+                        hazard_level=0.0,
+                        current_occupants=0,
+                        base_weight=eff_d_from,
+                    )
+                    all_edges.append(edge_from)
+                    combined_G.add_edge(
+                        landing_from_id,
+                        closest_from,
+                        length=eff_d_from,
+                        width=edge_from.width,
+                        capacity_per_sec=edge_from.capacity_per_sec,
+                        wheelchair_accessible=edge_from.wheelchair_accessible,
+                        hazard_level=0.0,
+                        current_occupants=0,
+                        weight=edge_from.base_weight,
+                    )
+
+                # Connect landing_to to nearest corridor or doorway node on to_floor
+                candidates_to = [
+                    nid for nid, nd in all_nodes.items()
+                    if nd.floor_id == to_fid and nd.id != landing_to_id
+                    and nd.node_type in [NodeType.CORRIDOR_JUNCTION, NodeType.CORRIDOR_WAYPOINT, NodeType.DOORWAY]
+                ]
+                if candidates_to:
+                    closest_to = min(
+                        candidates_to,
+                        key=lambda cid: math.hypot(all_nodes[cid].x - x_to, all_nodes[cid].y - y_to)
+                    )
+                    d_to = math.hypot(all_nodes[closest_to].x - x_to, all_nodes[closest_to].y - y_to)
+                    eff_d_to = max(0.5, round(d_to, 2))
+                    edge_to = GraphEdge(
+                        u=landing_to_id,
+                        v=closest_to,
+                        length=eff_d_to,
+                        width=stair.width,
+                        capacity_per_sec=stair.throughput_per_sec,
+                        wheelchair_accessible=is_wheelchair and all_nodes[closest_to].is_accessible,
+                        hazard_level=0.0,
+                        current_occupants=0,
+                        base_weight=eff_d_to,
+                    )
+                    all_edges.append(edge_to)
+                    combined_G.add_edge(
+                        landing_to_id,
+                        closest_to,
+                        length=eff_d_to,
+                        width=edge_to.width,
+                        capacity_per_sec=edge_to.capacity_per_sec,
+                        wheelchair_accessible=edge_to.wheelchair_accessible,
+                        hazard_level=0.0,
+                        current_occupants=0,
+                        weight=edge_to.base_weight,
+                    )
+
+        nav_model = NavigationGraphModel(nodes=all_nodes, edges=all_edges)
+        return combined_G, nav_model
+
     def _generate_corridor_network(
         self, floor: Floor, existing_nodes: Dict[str, GraphNode], G: nx.Graph
     ) -> List[Tuple[GraphNode, List[GraphEdge]]]:
@@ -222,6 +451,7 @@ class BuildingGraphGenerator:
         # Default corridor structure for modern commercial floors:
         # Central main spine along y = height/2 or spanning lengthwise with lateral loops
         cy = floor.height / 2.0
+        floor_z = round(getattr(floor, "elevation", 0.0), 2)
         
         # Discretize corridor spine from x=5m to x=width-5m with waypoint_spacing
         spine_nodes: List[GraphNode] = []
@@ -236,6 +466,7 @@ class BuildingGraphGenerator:
                 floor_id=floor.id,
                 x=round(px, 2),
                 y=round(cy, 2),
+                z=floor_z,
                 node_type=NodeType.CORRIDOR_JUNCTION if (i == 0 or i == num_points or i % 3 == 0) else NodeType.CORRIDOR_WAYPOINT,
                 is_accessible=True,
                 label=f"Hallway Point {i}",
@@ -280,6 +511,7 @@ class BuildingGraphGenerator:
                         floor_id=floor.id,
                         x=round(wx, 2),
                         y=round(wy, 2),
+                        z=floor_z,
                         node_type=NodeType.CORRIDOR_WAYPOINT,
                         is_accessible=True,
                         label=f"{wing_name.capitalize()} Wing {j}",

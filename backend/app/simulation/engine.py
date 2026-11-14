@@ -71,8 +71,16 @@ class SimulationEngine:
         # 1. Build and validate navigation graph
         self.graph_gen = BuildingGraphGenerator(waypoint_spacing=4.0)
         self.floor: Floor = self.scenario.building.floors[0]
-        self.nx_graph, self.nav_model = self.graph_gen.generate_floor_graph(self.floor)
-        self.topology_audit = self.graph_gen.validate_graph(self.nx_graph, self.nav_model)
+        self.is_multifloor = len(self.scenario.building.floors) > 1
+
+        if self.is_multifloor:
+            self.nx_graph, self.nav_model = self.graph_gen.generate_building_graph(self.scenario.building)
+            self.topology_audit = self.graph_gen.validate_graph(self.nx_graph, self.nav_model)
+            self.exits: List[Exit] = [e.model_copy() for f in self.scenario.building.floors for e in f.exits]
+        else:
+            self.nx_graph, self.nav_model = self.graph_gen.generate_floor_graph(self.floor)
+            self.topology_audit = self.graph_gen.validate_graph(self.nx_graph, self.nav_model)
+            self.exits: List[Exit] = [e.model_copy() for e in self.floor.exits]
 
         # Precompute edge geometric data and lookup maps
         self._edge_data: Dict[Tuple[str, str], Dict] = {}
@@ -94,7 +102,6 @@ class SimulationEngine:
             self._edge_data[edge_key_2] = info
 
         # 2. Exits, Hazards and Scenario Events
-        self.exits: List[Exit] = [e.model_copy() for e in self.floor.exits]
         self.hazards: List[HazardSource] = [h.model_copy() for h in self.scenario.hazard_sources]
         self.events: List[ScenarioEvent] = [ev.model_copy() for ev in self.scenario.events]
         self.executed_event_ids: List[str] = []
@@ -147,8 +154,11 @@ class SimulationEngine:
                 allocated += cnt
             zone_counts.append(cnt)
 
+        floor_elevations = {f.id: getattr(f, "elevation", 0.0) for f in self.scenario.building.floors}
         occ_idx = 0
         for zone, count in zip(zones, zone_counts):
+            zone_floor_id = zone.floor_id if (zone.floor_id and any(f.id == zone.floor_id for f in self.scenario.building.floors)) else self.floor.id
+            zone_z = floor_elevations.get(zone_floor_id, 0.0)
             for _ in range(count):
                 occ_idx += 1
                 px = self.rng.uniform(zone.bounds.x, zone.bounds.x + zone.bounds.width)
@@ -165,13 +175,14 @@ class SimulationEngine:
                     mob_cat = MobilityCategory.STANDARD
                     free_speed = float(self.rng.uniform(1.20, 1.45))
 
-                closest_node_id = self._find_nearest_navigable_node(px, py, mob_cat)
+                closest_node_id = self._find_nearest_navigable_node(px, py, mob_cat, floor_id=zone_floor_id)
 
                 occ = Occupant(
                     id=f"occ_{occ_idx:03d}",
-                    floor_id=self.floor.id,
+                    floor_id=zone_floor_id,
                     x=round(px, 2),
                     y=round(py, 2),
+                    z=round(zone_z, 2),
                     current_node_id=closest_node_id,
                     movement_speed=round(free_speed, 2),
                     free_speed=round(free_speed, 2),
@@ -190,17 +201,32 @@ class SimulationEngine:
 
         return occupants
 
-    def _find_nearest_navigable_node(self, x: float, y: float, mobility: MobilityCategory) -> str:
+    def _find_nearest_navigable_node(
+        self, x: float, y: float, mobility: MobilityCategory, floor_id: Optional[str] = None
+    ) -> str:
         best_nid = ""
         best_dist = float("inf")
 
+        # 1. Search matching floor
         for nid, node in self.nav_model.nodes.items():
+            if floor_id and node.floor_id != floor_id:
+                continue
             if mobility == MobilityCategory.WHEELCHAIR and not node.is_accessible:
                 continue
             dist = math.hypot(node.x - x, node.y - y)
             if dist < best_dist:
                 best_dist = dist
                 best_nid = nid
+
+        # 2. Fallback to any floor if empty
+        if not best_nid:
+            for nid, node in self.nav_model.nodes.items():
+                if mobility == MobilityCategory.WHEELCHAIR and not node.is_accessible:
+                    continue
+                dist = math.hypot(node.x - x, node.y - y)
+                if dist < best_dist:
+                    best_dist = dist
+                    best_nid = nid
 
         return best_nid if best_nid else list(self.nav_model.nodes.keys())[0]
 
@@ -803,14 +829,19 @@ class SimulationEngine:
 
             occ.movement_speed = effective_speed
 
+            target_z = getattr(target_node, "z", 0.0)
+            occ_z = getattr(occ, "z", 0.0)
             dx = target_node.x - occ.x
             dy = target_node.y - occ.y
-            dist = math.hypot(dx, dy)
+            dz = target_z - occ_z
+            dist = math.hypot(dx, dy, dz)
             step_dist = effective_speed * dt
 
             if dist <= step_dist or dist < 0.25:
                 occ.x = target_node.x
                 occ.y = target_node.y
+                occ.z = target_z
+                occ.floor_id = target_node.floor_id
                 occ.distance_traveled = round(occ.distance_traveled + dist, 2)
                 occ.current_node_id = target_node_id
                 occ.path_index += 1
@@ -820,8 +851,11 @@ class SimulationEngine:
             else:
                 nx_dir = dx / dist
                 ny_dir = dy / dist
+                nz_dir = dz / dist
                 occ.x = round(occ.x + nx_dir * step_dist, 2)
                 occ.y = round(occ.y + ny_dir * step_dist, 2)
+                occ.z = round(occ.z + nz_dir * step_dist, 2)
+                occ.floor_id = target_node.floor_id
                 occ.distance_traveled = round(occ.distance_traveled + step_dist, 2)
 
         # 6. Service Doorway and Exit Queues with Fractional Capacity Accumulation
@@ -875,7 +909,10 @@ class SimulationEngine:
 
         queue_pos = len(self.exit_queues[exit_elem.id])
         offset = min(6.0, queue_pos * 0.45)
-        occ.x = round(exit_elem.x + (0.5 if exit_elem.x < self.floor.width / 2 else -0.5) * offset, 2)
+        exit_floor = next((f for f in self.scenario.building.floors if f.id == exit_elem.floor_id), self.floor)
+        occ.floor_id = exit_elem.floor_id
+        occ.z = getattr(exit_floor, "elevation", 0.0)
+        occ.x = round(exit_elem.x + (0.5 if exit_elem.x < exit_floor.width / 2 else -0.5) * offset, 2)
         occ.y = round(exit_elem.y + (self.rng.uniform(-0.3, 0.3)), 2)
 
     def _service_exit_queues(self, dt: float) -> int:

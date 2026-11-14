@@ -1,0 +1,551 @@
+{
+  "id": "scenario_combined_emergency",
+  "name": "Scenario 6: Combined Complex Emergency",
+  "description": "Compound hazard scenario with active fire spreading across northern corridor, sudden exit closure of East Fire Escape at t=15s, and 20% wheelchair accessibility requirement.",
+  "building": {
+    "id": "bldg_hq_comb",
+    "name": "Apex Innovation HQ (Combined Emergency)",
+    "description": "Compound multi-threat evacuation challenge",
+    "author": "EXIT-ZERO Studio",
+    "version": "1.0",
+    "floors": [
+      {
+        "id": "floor_comb",
+        "name": "Ground Operations & Corporate Suites",
+        "level": 1,
+        "elevation": 0.0,
+        "floor_height": 3.2,
+        "width": 80.0,
+        "height": 45.0,
+        "rooms": [
+          {
+            "id": "room_101",
+            "floor_id": "floor_comb",
+            "name": "Executive Suite 101",
+            "bounds": {
+              "x": 5.0,
+              "y": 5.0,
+              "width": 12.0,
+              "height": 10.0
+            },
+            "room_type": "office",
+            "max_capacity": 10,
+            "height": 3.2,
+            "is_accessible": true
+          },
+          {
+            "id": "room_102",
+            "floor_id": "floor_comb",
+            "name": "Finance Office 102",
+            "bounds": {
+              "x": 19.0,
+              "y": 5.0,
+              "width": 12.0,
+              "height": 10.0
+            },
+            "room_type": "office",
+            "max_capacity": 12,
+            "height": 3.2,
+            "is_accessible": true
+          },
+          {
+            "id": "room_103",
+            "floor_id": "floor_comb",
+            "name": "Main Boardroom A",
+            "bounds": {
+              "x": 33.0,
+              "y": 5.0,
+              "width": 16.0,
+              "height": 10.0
+            },
+            "room_type": "conference",
+            "max_capacity": 25,
+            "height": 3.2,
+            "is_accessible": true
+          },
+          {
+            "id": "room_104",
+            "floor_id": "floor_comb",
+            "name": "Engineering Lab 104",
+            "bounds": {
+              "x": 51.0,
+              "y": 5.0,
+              "width": 12.0,
+              "height": 10.0
+            },
+            "room_type": "lab",
+            "max_capacity": 15,
+            "height": 3.2,
+            "is_accessible": true
+          },
+          {
+            "id": "room_105",
+            "floor_id": "floor_comb",
+            "name": "Server & Telecom Room",
+            "bounds": {
+              "x": 65.0,
+              "y": 5.0,
+              "width": 10.0,
+              "height": 10.0
+            },
+            "room_type": "storage",
+            "max_capacity": 5,
+            "height": 3.2,
+            "is_accessible": true
+          },
+          {
+            "id": "room_hub",
+            "floor_id": "floor_comb",
+            "name": "Central Atrium & Cafeteria",
+            "bounds": {
+              "x": 28.0,
+              "y": 17.0,
+              "width": 24.0,
+              "height": 11.0
+            },
+            "room_type": "cafeteria",
+            "max_capacity": 45,
+            "height": 3.2,
+            "is_accessible": true
+          },
+          {
+            "id": "room_201",
+            "floor_id": "floor_comb",
+            "name": "Operations Center 201",
+            "bounds": {
+              "x": 5.0,
+              "y": 30.0,
+              "width": 14.0,
+              "height": 10.0
+            },
+            "room_type": "office",
+            "max_capacity": 18,
+            "height": 3.2,
+            "is_accessible": true
+          },
+          {
+            "id": "room_202",
+            "floor_id": "floor_comb",
+            "name": "Product Design 202",
+            "bounds": {
+              "x": 21.0,
+              "y": 30.0,
+              "width": 12.0,
+              "height": 10.0
+            },
+            "room_type": "office",
+            "max_capacity": 14,
+            "height": 3.2,
+            "is_accessible": true
+          },
+          {
+            "id": "room_203",
+            "floor_id": "floor_comb",
+            "name": "Conference Room B",
+            "bounds": {
+              "x": 35.0,
+              "y": 30.0,
+              "width": 14.0,
+              "height": 10.0
+            },
+            "room_type": "conference",
+            "max_capacity": 20,
+            "height": 3.2,
+            "is_accessible": true
+          },
+          {
+            "id": "room_204",
+            "floor_id": "floor_comb",
+            "name": "Legal & Compliance 204",
+            "bounds": {
+              "x": 51.0,
+              "y": 30.0,
+              "width": 11.0,
+              "height": 10.0
+            },
+            "room_type": "office",
+            "max_capacity": 12,
+            "height": 3.2,
+            "is_accessible": true
+          },
+          {
+            "id": "room_205",
+            "floor_id": "floor_comb",
+            "name": "Restrooms & Lockers",
+            "bounds": {
+              "x": 64.0,
+              "y": 30.0,
+              "width": 11.0,
+              "height": 10.0
+            },
+            "room_type": "restroom",
+            "max_capacity": 10,
+            "height": 3.2,
+            "is_accessible": true
+          }
+        ],
+        "doorways": [
+          {
+            "id": "door_101",
+            "floor_id": "floor_comb",
+            "x": 11.0,
+            "y": 15.0,
+            "width": 1.1,
+            "connects_rooms": [
+              "room_101"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_102",
+            "floor_id": "floor_comb",
+            "x": 25.0,
+            "y": 15.0,
+            "width": 1.1,
+            "connects_rooms": [
+              "room_102"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_103",
+            "floor_id": "floor_comb",
+            "x": 41.0,
+            "y": 15.0,
+            "width": 1.8,
+            "connects_rooms": [
+              "room_103"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_104",
+            "floor_id": "floor_comb",
+            "x": 57.0,
+            "y": 15.0,
+            "width": 1.2,
+            "connects_rooms": [
+              "room_104"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_105",
+            "floor_id": "floor_comb",
+            "x": 70.0,
+            "y": 15.0,
+            "width": 1.0,
+            "connects_rooms": [
+              "room_105"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_hub_n",
+            "floor_id": "floor_comb",
+            "x": 40.0,
+            "y": 17.0,
+            "width": 2.2,
+            "connects_rooms": [
+              "room_hub"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_hub_s",
+            "floor_id": "floor_comb",
+            "x": 40.0,
+            "y": 28.0,
+            "width": 2.2,
+            "connects_rooms": [
+              "room_hub"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_hub_w",
+            "floor_id": "floor_comb",
+            "x": 28.0,
+            "y": 22.5,
+            "width": 1.8,
+            "connects_rooms": [
+              "room_hub"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_hub_e",
+            "floor_id": "floor_comb",
+            "x": 52.0,
+            "y": 22.5,
+            "width": 1.8,
+            "connects_rooms": [
+              "room_hub"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_201",
+            "floor_id": "floor_comb",
+            "x": 12.0,
+            "y": 30.0,
+            "width": 1.2,
+            "connects_rooms": [
+              "room_201"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_202",
+            "floor_id": "floor_comb",
+            "x": 27.0,
+            "y": 30.0,
+            "width": 1.1,
+            "connects_rooms": [
+              "room_202"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_203",
+            "floor_id": "floor_comb",
+            "x": 42.0,
+            "y": 30.0,
+            "width": 1.6,
+            "connects_rooms": [
+              "room_203"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_204",
+            "floor_id": "floor_comb",
+            "x": 56.5,
+            "y": 30.0,
+            "width": 1.1,
+            "connects_rooms": [
+              "room_204"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          },
+          {
+            "id": "door_205",
+            "floor_id": "floor_comb",
+            "x": 69.5,
+            "y": 30.0,
+            "width": 1.1,
+            "connects_rooms": [
+              "room_205"
+            ],
+            "is_open": true,
+            "is_emergency_exit": false
+          }
+        ],
+        "obstacles": [
+          {
+            "id": "col_1",
+            "floor_id": "floor_comb",
+            "x": 20.0,
+            "y": 22.0,
+            "width": 1.2,
+            "height": 1.2,
+            "obstacle_type": "column",
+            "passable": false
+          },
+          {
+            "id": "col_2",
+            "floor_id": "floor_comb",
+            "x": 60.0,
+            "y": 22.0,
+            "width": 1.2,
+            "height": 1.2,
+            "obstacle_type": "column",
+            "passable": false
+          },
+          {
+            "id": "col_3",
+            "floor_id": "floor_comb",
+            "x": 15.0,
+            "y": 15.0,
+            "width": 1.0,
+            "height": 1.0,
+            "obstacle_type": "column",
+            "passable": false
+          },
+          {
+            "id": "col_4",
+            "floor_id": "floor_comb",
+            "x": 65.0,
+            "y": 15.0,
+            "width": 1.0,
+            "height": 1.0,
+            "obstacle_type": "column",
+            "passable": false
+          }
+        ],
+        "exits": [
+          {
+            "id": "exit_north_main",
+            "floor_id": "floor_comb",
+            "name": "Exit A: North Grand Portal",
+            "x": 40.0,
+            "y": 2.0,
+            "width": 3.0,
+            "throughput_per_sec": 3.2,
+            "is_wheelchair_accessible": true,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          },
+          {
+            "id": "exit_east_fire",
+            "floor_id": "floor_comb",
+            "name": "Exit B: East Fire Escape",
+            "x": 77.0,
+            "y": 22.5,
+            "width": 1.8,
+            "throughput_per_sec": 2.0,
+            "is_wheelchair_accessible": true,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          },
+          {
+            "id": "exit_south_emergency",
+            "floor_id": "floor_comb",
+            "name": "Exit C: South Stair Exit",
+            "x": 40.0,
+            "y": 43.0,
+            "width": 2.0,
+            "throughput_per_sec": 1.8,
+            "is_wheelchair_accessible": false,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          },
+          {
+            "id": "exit_west_ramp",
+            "floor_id": "floor_comb",
+            "name": "Exit D: West Accessible Ramp",
+            "x": 3.0,
+            "y": 22.5,
+            "width": 2.4,
+            "throughput_per_sec": 2.5,
+            "is_wheelchair_accessible": true,
+            "is_blocked": false,
+            "current_queue": 0,
+            "total_exited": 0
+          }
+        ],
+        "stairwells": [
+          {
+            "id": "stair_south",
+            "from_floor": "floor_comb",
+            "to_floor": "floor_2",
+            "x": 37.0,
+            "y": 41.0,
+            "width": 1.8,
+            "throughput_per_sec": 1.5,
+            "is_wheelchair_accessible": false,
+            "is_ramp": false,
+            "target_x": null,
+            "target_y": null
+          }
+        ]
+      }
+    ]
+  },
+  "hazard_sources": [
+    {
+      "id": "fire_north_hall",
+      "floor_id": "floor_comb",
+      "x": 40.0,
+      "y": 8.0,
+      "hazard_type": "fire",
+      "start_time_sec": 5.0,
+      "growth_rate": 0.22,
+      "max_radius": 20.0,
+      "intensity": 1.0
+    }
+  ],
+  "spawn_zones": [
+    {
+      "id": "sp_comb_north",
+      "floor_id": "floor_comb",
+      "name": "North Wing Staff",
+      "bounds": {
+        "x": 10.0,
+        "y": 6.0,
+        "width": 50.0,
+        "height": 8.0
+      },
+      "occupant_count": 60,
+      "wheelchair_ratio": 0.15,
+      "reduced_mobility_ratio": 0.1
+    },
+    {
+      "id": "sp_comb_hub",
+      "floor_id": "floor_comb",
+      "name": "Atrium & Dining Crowd",
+      "bounds": {
+        "x": 25.0,
+        "y": 18.0,
+        "width": 30.0,
+        "height": 8.0
+      },
+      "occupant_count": 70,
+      "wheelchair_ratio": 0.2,
+      "reduced_mobility_ratio": 0.15
+    },
+    {
+      "id": "sp_comb_south",
+      "floor_id": "floor_comb",
+      "name": "South Operations",
+      "bounds": {
+        "x": 10.0,
+        "y": 31.0,
+        "width": 50.0,
+        "height": 8.0
+      },
+      "occupant_count": 50,
+      "wheelchair_ratio": 0.25,
+      "reduced_mobility_ratio": 0.15
+    }
+  ],
+  "events": [
+    {
+      "time_sec": 15.0,
+      "event_type": "block_exit",
+      "target_id": "exit_east_fire",
+      "secondary_target_id": null,
+      "description": "East Fire Escape collapsed by secondary explosion."
+    }
+  ],
+  "total_occupants": 180,
+  "default_seed": 505,
+  "algorithm_weights": {
+    "w_distance": 1.0,
+    "w_congestion": 2.0,
+    "w_queue": 2.5,
+    "w_hazard": 8.0,
+    "w_reroute": 5.0,
+    "w_accessibility": 1000.0,
+    "w_accessibility_reservation": 0.0,
+    "hysteresis_threshold": 0.2,
+    "replan_interval_sec": 4.0,
+    "prediction_horizon_sec": 20.0
+  }
+}

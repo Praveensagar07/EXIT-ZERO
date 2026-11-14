@@ -6,11 +6,15 @@
     "id": "bldg_univ",
     "name": "Science Complex",
     "description": "Multi-department academic building",
+    "author": "EXIT-ZERO Studio",
+    "version": "1.0",
     "floors": [
       {
         "id": "floor_concourse",
         "name": "Level 1 Science Concourse",
         "level": 1,
+        "elevation": 0.0,
+        "floor_height": 3.2,
         "width": 90.0,
         "height": 55.0,
         "rooms": [
@@ -25,7 +29,9 @@
               "height": 18.0
             },
             "room_type": "conference",
-            "max_capacity": 120
+            "max_capacity": 120,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "lab_nano",
@@ -38,7 +44,9 @@
               "height": 18.0
             },
             "room_type": "lab",
-            "max_capacity": 30
+            "max_capacity": 30,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "lab_chem",
@@ -51,7 +59,9 @@
               "height": 18.0
             },
             "room_type": "lab",
-            "max_capacity": 20
+            "max_capacity": 20,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "commons",
@@ -64,7 +74,9 @@
               "height": 16.0
             },
             "room_type": "cafeteria",
-            "max_capacity": 80
+            "max_capacity": 80,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "faculty",
@@ -77,7 +89,9 @@
               "height": 16.0
             },
             "room_type": "office",
-            "max_capacity": 40
+            "max_capacity": 40,
+            "height": 3.2,
+            "is_accessible": true
           }
         ],
         "doorways": [
@@ -290,6 +304,7 @@
     "w_hazard": 8.0,
     "w_reroute": 5.0,
     "w_accessibility": 1000.0,
+    "w_accessibility_reservation": 0.0,
     "hysteresis_threshold": 0.2,
     "replan_interval_sec": 4.0,
     "prediction_horizon_sec": 20.0

@@ -36,6 +36,8 @@ export interface Room {
   bounds: BoundingBox;
   room_type: RoomType;
   max_capacity: number;
+  height?: number;
+  is_accessible?: boolean;
 }
 
 export interface Doorway {
@@ -83,12 +85,17 @@ export interface Stairwell {
   width: number;
   throughput_per_sec: number;
   is_wheelchair_accessible: boolean;
+  is_ramp?: boolean;
+  target_x?: number;
+  target_y?: number;
 }
 
 export interface Floor {
   id: string;
   name: string;
   level: number;
+  elevation?: number;
+  floor_height?: number;
   width: number;
   height: number;
   rooms: Room[];
@@ -102,7 +109,31 @@ export interface Building {
   id: string;
   name: string;
   description: string;
+  author?: string;
+  version?: string;
   floors: Floor[];
+}
+
+export interface BuildingSummary {
+  id: string;
+  name: string;
+  description: string;
+  floor_count: number;
+  room_count: number;
+  corridor_count: number;
+  exit_count: number;
+  stair_count: number;
+  ramp_count: number;
+  total_capacity: number;
+  is_custom?: boolean;
+}
+
+export interface BuildingValidationReport {
+  is_valid: boolean;
+  errors: string[];
+  warnings: string[];
+  stats: Record<string, number>;
+  audit?: TopologyAuditReport;
 }
 
 export interface HazardSource {
@@ -132,6 +163,7 @@ export interface GraphNode {
   floor_id: string;
   x: number;
   y: number;
+  z?: number;
   node_type: NodeType;
   room_id?: string;
   is_accessible: boolean;
@@ -192,6 +224,7 @@ export interface Occupant {
   floor_id: string;
   x: number;
   y: number;
+  z?: number;
   current_node_id: string;
   target_exit_id?: string;
   movement_speed: number;

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 interface FloorPlanViewportProps {
-  floor: Floor;
+  floor: Floor | null;
   graph: NavigationGraphModel;
   occupants: Occupant[];
   hazards: HazardSource[];
@@ -28,8 +28,8 @@ interface FloorPlanViewportProps {
   showRoutes: boolean;
   showCongestionHeatmap: boolean;
   simTime?: number;
-  selectedOccupantId: string | null;
-  onSelectOccupant: (id: string | null) => void;
+  selectedOccupantId?: string | null;
+  onSelectOccupant?: (id: string | null) => void;
   onToggleExit?: (exitId: string) => void;
 }
 
@@ -70,21 +70,25 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
 
   // Auto-fit to container
   const handleFitToView = useCallback(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !floor) return;
     const { clientWidth, clientHeight } = containerRef.current;
-    const scaleX = (clientWidth - 80) / Math.max(10, floor.width);
-    const scaleY = (clientHeight - 80) / Math.max(10, floor.height);
+    const fWidth = floor.width || 80.0;
+    const fHeight = floor.height || 45.0;
+    const scaleX = (clientWidth - 80) / Math.max(10, fWidth);
+    const scaleY = (clientHeight - 80) / Math.max(10, fHeight);
     const optimalScale = Math.max(6, Math.min(scaleX, scaleY, 24));
     setScale(optimalScale);
 
-    const centerX = (clientWidth - floor.width * optimalScale) / 2;
-    const centerY = (clientHeight - floor.height * optimalScale) / 2;
+    const centerX = (clientWidth - fWidth * optimalScale) / 2;
+    const centerY = (clientHeight - fHeight * optimalScale) / 2;
     setPan({ x: Math.max(20, centerX), y: Math.max(20, centerY) });
-  }, [floor.height, floor.width]);
+  }, [floor]);
 
   useEffect(() => {
-    handleFitToView();
-  }, [floor.id, handleFitToView]);
+    if (floor) {
+      handleFitToView();
+    }
+  }, [floor, handleFitToView]);
 
   // Mouse wheel zoom
   const handleWheel = (e: React.WheelEvent) => {
@@ -169,6 +173,14 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
     return 'rgba(239, 68, 68, 0.95)';                     // Crimson (crush bottleneck)
   };
 
+  if (!floor) {
+    return (
+      <div className="relative w-full h-full bg-[#FAFAF8] flex items-center justify-center text-xs text-[#647078]">
+        No floor selected
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
@@ -180,17 +192,17 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
       onMouseLeave={handleMouseUp}
     >
       {/* Top HUD Overlays & Controls */}
-      <div className="absolute top-3 left-3 z-20 flex items-center space-x-2 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-md border border-slate-700 text-xs text-slate-300 shadow-md">
-        <Compass className="w-3.5 h-3.5 text-emerald-400" />
-        <span className="font-semibold text-white">{floor.name}</span>
-        <span className="text-slate-500">|</span>
-        <span>
+      <div className="absolute top-16 left-4 z-10 flex items-center space-x-2 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-md border border-[#E5E7EB] text-xs text-[#242A30] shadow-sm">
+        <Compass className="w-3.5 h-3.5 text-[#167D73]" />
+        <span className="font-semibold text-[#242A30]">{floor.name}</span>
+        <span className="text-[#647078]">|</span>
+        <span className="text-[#647078]">
           {floor.width}m × {floor.height}m
         </span>
         {showCongestionHeatmap && (
           <>
-            <span className="text-slate-500">|</span>
-            <span className="text-amber-400 font-semibold flex items-center space-x-1">
+            <span className="text-[#647078]">|</span>
+            <span className="text-amber-600 font-semibold flex items-center space-x-1">
               <Activity className="w-3 h-3" />
               <span>DENSITY HEATMAP ACTIVE</span>
             </span>
@@ -198,25 +210,25 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
         )}
       </div>
 
-      <div className="absolute top-3 right-3 z-20 flex flex-col space-y-1 bg-slate-900/90 backdrop-blur-md p-1 rounded-md border border-slate-700 shadow-md">
+      <div className="absolute top-4 right-4 z-10 flex flex-col space-y-1 bg-white/95 backdrop-blur-md p-1 rounded-md border border-[#E5E7EB] shadow-sm">
         <button
           onClick={() => setScale((s) => Math.min(s * 1.2, 45))}
           title="Zoom In"
-          className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition"
+          className="p-1.5 hover:bg-slate-100 text-[#647078] hover:text-[#242A30] rounded transition"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
           onClick={() => setScale((s) => Math.max(s * 0.8, 5))}
           title="Zoom Out"
-          className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition"
+          className="p-1.5 hover:bg-slate-100 text-[#647078] hover:text-[#242A30] rounded transition"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           onClick={handleFitToView}
           title="Fit to Screen"
-          className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition"
+          className="p-1.5 hover:bg-slate-100 text-[#647078] hover:text-[#242A30] rounded transition"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
@@ -594,7 +606,7 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onSelectOccupant(isSelected ? null : occ.id);
+                    onSelectOccupant?.(isSelected ? null : occ.id);
                   }}
                   onMouseEnter={(e) =>
                     setHoveredEntity({

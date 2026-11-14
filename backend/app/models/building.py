@@ -84,6 +84,9 @@ class Stairwell(BaseModel):
     width: float = 1.5
     throughput_per_sec: float = 1.5
     is_wheelchair_accessible: bool = False
+    is_ramp: bool = False
+    target_x: Optional[float] = None
+    target_y: Optional[float] = None
 
 
 class Room(BaseModel):
@@ -93,6 +96,8 @@ class Room(BaseModel):
     bounds: BoundingBox
     room_type: RoomType = RoomType.OFFICE
     max_capacity: int = 25
+    height: float = 3.2
+    is_accessible: bool = True
 
 
 class HazardSource(BaseModel):
@@ -121,8 +126,10 @@ class Floor(BaseModel):
     id: str
     name: str
     level: int = 1
-    width: float = 80.0   # meters
-    height: float = 50.0  # meters
+    elevation: float = 0.0      # vertical elevation in meters (z)
+    floor_height: float = 3.2   # floor to ceiling height in meters
+    width: float = 80.0         # meters
+    height: float = 50.0        # meters
     rooms: List[Room] = Field(default_factory=list)
     doorways: List[Doorway] = Field(default_factory=list)
     obstacles: List[Obstacle] = Field(default_factory=list)
@@ -134,4 +141,6 @@ class Building(BaseModel):
     id: str
     name: str
     description: str
+    author: Optional[str] = "EXIT-ZERO Studio"
+    version: str = "1.0"
     floors: List[Floor] = Field(default_factory=list)

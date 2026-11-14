@@ -1,0 +1,32 @@
+# EXIT-ZERO Experimental Benchmark Export
+# Scenario ID,scenario_normal_evacuation
+# Scenario Name,Scenario 1: Normal Evacuation (All Exits Clear)
+# Occupants (N),30
+# Sample Size (Seeds),2
+# Evidence Tier,preliminary
+# Uncertainty Note,Fewer than 10 completed paired seeds; treat estimates and intervals as preliminary.
+# Timestamp,2026-11-14T08:35:26.676286+00:00
+
+SUMMARY_STATISTICS
+Metric,Baseline,Adaptive (EXIT-ZERO),Delta (Baseline - Adapt),Relative % Improvement
+Mean Total Evacuation Time (s),,,,N/A
+Median Total Evacuation Time (s),,,,N/A
+Std Dev Evacuation Time (s),,,N/A,N/A
+95% Bootstrap CI for Delta (s),,,"[None, None]",
+Permutation Test p-value,,,,Statistically Significant: NO
+Wins / Losses / Ties,Baseline Wins: 1,Adaptive Wins: 0,Ties: 1,
+Mean Peak Queue Reduction,,,0.5,occupants
+Mean Peak Density Reduction,,,0.04,pers/m²
+Mean Waiting Time Reduction,,,0.0,seconds
+Mean Hazard Exposure Reduction,,,0.0,dosage
+Mean Adaptive Reroutes,,,0.0,reroutes/trial
+Mean Wheelchair Evacuation Time (s),,,,positive delta favors EXIT-ZERO
+Total Wall Benchmark Time (s),,,1.146,
+"Peak Python Heap (MB, tracemalloc)",,,1.03,
+"Peak Process RSS (MB, sampled)",,,85.84,
+Memory Measurement Note,,,Python heap is measured by tracemalloc; process RSS is sampled with psutil at simulation-step boundaries.,
+
+PER_SEED_TRIAL_DATA
+Seed,Winner,Base_Evac_Time_s,Adapt_Evac_Time_s,Delta_Time_s,Rel_Time_Imp_Pct,Base_Median_Time_s,Adapt_Median_Time_s,Base_Peak_Queue,Adapt_Peak_Queue,Delta_Peak_Queue,Base_Peak_Density,Adapt_Peak_Density,Delta_Peak_Density,Base_Wait_Time_s,Adapt_Wait_Time_s,Base_Hazard_Exposure,Adapt_Hazard_Exposure,Adapt_Reroutes,Base_Wheelchair_Mean_Evac_Time_s,Adapt_Wheelchair_Mean_Evac_Time_s,Delta_Wheelchair_Mean_Evac_Time_s,Base_Wall_ms,Adapt_Wall_ms,Peak_Process_RSS_MB
+301,baseline,,,,,21.0,20.75,2,1,1,0.42,0.33,0.09,0.08,0.08,0.0,0.0,0,24.0,23.5,0.5,170.78,368.24,85.65
+302,tie,,,,,22.5,22.5,1,1,0,1.0,1.0,0.0,0.02,0.02,0.0,0.0,0,,,,187.84,415.52,85.84

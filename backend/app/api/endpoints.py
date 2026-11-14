@@ -13,6 +13,18 @@ from app.experiments.models import (
     ExperimentRunRequest,
 )
 
+from app.models.building import (
+    BoundingBox,
+    Building,
+    Doorway,
+    Exit,
+    Floor,
+    HazardSource,
+    Room,
+    RoomType,
+    SpawnZone,
+    Stairwell,
+)
 from app.models.scenario import ScenarioConfig, ScenarioSummary
 from app.models.simulation_state import (
     SimulationInitRequest,
@@ -21,12 +33,44 @@ from app.models.simulation_state import (
 )
 from app.simulation.engine import SimulationEngine
 from app.simulation.graph_generator import BuildingGraphGenerator
-from app.simulation.scenarios import get_scenario, list_scenarios
+from app.simulation.scenarios import SCENARIO_REGISTRY, get_scenario, list_scenarios
 
 router = APIRouter(prefix="/api")
 
+# Directory for user-created custom buildings
+_CUSTOM_BUILDINGS_DIR = Path(__file__).resolve().parents[3] / "scenarios" / "custom_buildings"
+_CUSTOM_BUILDINGS_DIR.mkdir(parents=True, exist_ok=True)
+
 # In-memory store for active simulation sessions
 active_sessions: Dict[str, SimulationEngine] = {}
+
+
+class BuildingSummary(BaseModel):
+    id: str
+    name: str
+    description: str
+    floor_count: int
+    room_count: int
+    corridor_count: int
+    exit_count: int
+    stair_count: int
+    ramp_count: int
+    total_capacity: int
+    is_custom: bool = False
+
+
+class BuildingValidationReport(BaseModel):
+    is_valid: bool
+    errors: List[str] = []
+    warnings: List[str] = []
+    stats: Dict[str, int] = {}
+    audit: Optional[Dict[str, object]] = None
+
+
+class BuildingRunRequest(BaseModel):
+    occupant_count: Optional[int] = None
+    algorithm: str = "adaptive"
+    seed: int = 42
 
 
 class HealthResponse(BaseModel):
@@ -39,6 +83,211 @@ class HealthResponse(BaseModel):
 class GraphValidationRequest(BaseModel):
     scenario_id: Optional[str] = None
     custom_scenario: Optional[ScenarioConfig] = None
+
+
+def _summarize_building(building: Building, is_custom: bool = False) -> BuildingSummary:
+    floors = building.floors
+    room_count = sum(len(f.rooms) for f in floors)
+    exit_count = sum(len(f.exits) for f in floors)
+    stair_count = sum(sum(1 for s in f.stairwells if not s.is_ramp) for f in floors)
+    ramp_count = sum(sum(1 for s in f.stairwells if s.is_ramp) for f in floors)
+    capacity = sum(sum(r.max_capacity for r in f.rooms) for f in floors)
+    corridor_count = len(floors) * 4
+
+    return BuildingSummary(
+        id=building.id,
+        name=building.name,
+        description=building.description,
+        floor_count=len(floors),
+        room_count=room_count,
+        corridor_count=corridor_count,
+        exit_count=exit_count,
+        stair_count=stair_count,
+        ramp_count=ramp_count,
+        total_capacity=capacity if capacity > 0 else 100,
+        is_custom=is_custom,
+    )
+
+
+def _load_building_by_id(building_id: str) -> Optional[Building]:
+    # 1. Custom file
+    custom_path = _CUSTOM_BUILDINGS_DIR / f"{building_id}.json"
+    if custom_path.exists():
+        try:
+            data = json.loads(custom_path.read_text(encoding="utf-8"))
+            return Building.model_validate(data)
+        except Exception:
+            pass
+
+    # 2. Check scenarios
+    for sc in SCENARIO_REGISTRY.values():
+        if sc.building.id == building_id or sc.id == building_id:
+            return sc.building
+
+    return None
+
+
+@router.get("/buildings", response_model=List[BuildingSummary])
+def list_buildings():
+    buildings: List[BuildingSummary] = []
+    seen_ids = set()
+
+    # 1. Built-in scenario buildings
+    for sc in SCENARIO_REGISTRY.values():
+        b = sc.building
+        if b.id not in seen_ids:
+            seen_ids.add(b.id)
+            buildings.append(_summarize_building(b, is_custom=False))
+
+    # 2. Custom saved buildings
+    if _CUSTOM_BUILDINGS_DIR.exists():
+        for file in _CUSTOM_BUILDINGS_DIR.glob("*.json"):
+            try:
+                data = json.loads(file.read_text(encoding="utf-8"))
+                b = Building.model_validate(data)
+                if b.id not in seen_ids:
+                    seen_ids.add(b.id)
+                    buildings.append(_summarize_building(b, is_custom=True))
+            except Exception:
+                continue
+
+    return buildings
+
+
+@router.get("/buildings/{building_id}", response_model=Building)
+def get_building_detail(building_id: str):
+    b = _load_building_by_id(building_id)
+    if not b:
+        raise HTTPException(status_code=404, detail=f"Building '{building_id}' not found.")
+    return b
+
+
+@router.post("/buildings", response_model=BuildingSummary)
+def create_custom_building(building: Building):
+    file_path = _CUSTOM_BUILDINGS_DIR / f"{building.id}.json"
+    file_path.write_text(building.model_dump_json(indent=2), encoding="utf-8")
+    return _summarize_building(building, is_custom=True)
+
+
+@router.put("/buildings/{building_id}", response_model=BuildingSummary)
+def update_custom_building(building_id: str, building: Building):
+    building.id = building_id
+    file_path = _CUSTOM_BUILDINGS_DIR / f"{building_id}.json"
+    file_path.write_text(building.model_dump_json(indent=2), encoding="utf-8")
+    return _summarize_building(building, is_custom=True)
+
+
+@router.delete("/buildings/{building_id}")
+def delete_custom_building(building_id: str):
+    file_path = _CUSTOM_BUILDINGS_DIR / f"{building_id}.json"
+    if file_path.exists():
+        file_path.unlink()
+        return {"status": "deleted", "building_id": building_id}
+    raise HTTPException(status_code=404, detail=f"Custom building '{building_id}' not found.")
+
+
+@router.post("/buildings/validate", response_model=BuildingValidationReport)
+def validate_building_endpoint(building: Building):
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    if not building.floors:
+        errors.append("Building must contain at least one floor.")
+
+    total_exits = sum(len(f.exits) for f in building.floors)
+    if total_exits == 0:
+        errors.append("Building has zero emergency exits defined.")
+
+    floor_ids = {f.id for f in building.floors}
+    for f in building.floors:
+        for s in f.stairwells:
+            if s.from_floor not in floor_ids:
+                errors.append(f"Connector '{s.id}' references nonexistent from_floor '{s.from_floor}'.")
+            if s.to_floor not in floor_ids:
+                errors.append(f"Connector '{s.id}' references nonexistent to_floor '{s.to_floor}'.")
+
+    audit = None
+    if not errors:
+        try:
+            gen = BuildingGraphGenerator(waypoint_spacing=4.0)
+            if len(building.floors) > 1:
+                G, nav_model = gen.generate_building_graph(building)
+            else:
+                G, nav_model = gen.generate_floor_graph(building.floors[0])
+            audit = gen.validate_graph(G, nav_model)
+            if not audit["is_valid"]:
+                if audit.get("unreachable_rooms"):
+                    errors.append(f"Unreachable rooms detected: {audit['unreachable_rooms']}")
+            if audit.get("wheelchair_accessible_coverage_percent", 100.0) < 50.0:
+                warnings.append(f"Low wheelchair accessible coverage ({audit['wheelchair_accessible_coverage_percent']}%)")
+        except Exception as e:
+            errors.append(f"Graph generation failure: {str(e)}")
+
+    summary = _summarize_building(building)
+    return BuildingValidationReport(
+        is_valid=len(errors) == 0,
+        errors=errors,
+        warnings=warnings,
+        stats={
+            "floors": summary.floor_count,
+            "rooms": summary.room_count,
+            "corridors": summary.corridor_count,
+            "exits": summary.exit_count,
+            "stairs": summary.stair_count,
+            "ramps": summary.ramp_count,
+            "capacity": summary.total_capacity,
+        },
+        audit=audit,
+    )
+
+
+@router.post("/buildings/{building_id}/run", response_model=SimulationState)
+def run_custom_building_simulation(building_id: str, req: BuildingRunRequest):
+    building = _load_building_by_id(building_id)
+    if not building:
+        raise HTTPException(status_code=404, detail=f"Building '{building_id}' not found.")
+
+    # Create dynamic spawn zones from rooms if none exist
+    spawn_zones = []
+    for f in building.floors:
+        for r in f.rooms:
+            spawn_zones.append(
+                SpawnZone(
+                    id=f"sp_{r.id}",
+                    floor_id=f.id,
+                    name=f"Zone {r.name}",
+                    bounds=r.bounds,
+                    occupant_count=max(2, int(r.max_capacity * 0.5)),
+                    wheelchair_ratio=0.10,
+                    reduced_mobility_ratio=0.15,
+                )
+            )
+
+    scenario_id = f"custom_scenario_{building.id}"
+    total_occ = req.occupant_count or min(150, sum(z.occupant_count for z in spawn_zones) or 50)
+
+    scenario = ScenarioConfig(
+        id=scenario_id,
+        name=f"Simulation: {building.name}",
+        description=f"Automated simulation generated from Building Studio for {building.name}.",
+        building=building,
+        hazard_sources=[],
+        spawn_zones=spawn_zones,
+        events=[],
+        total_occupants=total_occ,
+        default_seed=req.seed,
+    )
+
+    SCENARIO_REGISTRY[scenario_id] = scenario
+
+    engine = SimulationEngine(
+        scenario_config=scenario,
+        algorithm=req.algorithm,
+        seed=req.seed,
+        occupant_count_override=total_occ,
+    )
+    active_sessions[engine.session_id] = engine
+    return engine.get_state()
 
 
 @router.get("/health", response_model=HealthResponse)

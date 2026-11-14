@@ -7,6 +7,9 @@ import type {
   ExperimentRunRequest,
   ExperimentJobStatus,
   ExperimentResult,
+  Building,
+  BuildingSummary,
+  BuildingValidationReport,
 } from '../types/simulation';
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '/api').replace(/\/$/, '');
@@ -150,5 +153,68 @@ export const api = {
 
   getExportJsonUrl(jobId: string): string {
     return `${API_BASE}/experiments/${jobId}/export/json`;
+  },
+
+  async getBuildings(): Promise<BuildingSummary[]> {
+    const res = await fetch(`${API_BASE}/buildings`);
+    if (!res.ok) throw new Error(`Failed to fetch buildings: ${res.statusText}`);
+    return res.json();
+  },
+
+  async getBuilding(id: string): Promise<Building> {
+    const res = await fetch(`${API_BASE}/buildings/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error(`Failed to fetch building ${id}: ${res.statusText}`);
+    return res.json();
+  },
+
+  async createBuilding(building: Building): Promise<BuildingSummary> {
+    const res = await fetch(`${API_BASE}/buildings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(building),
+    });
+    if (!res.ok) throw new Error(`Failed to create building: ${res.statusText}`);
+    return res.json();
+  },
+
+  async updateBuilding(id: string, building: Building): Promise<BuildingSummary> {
+    const res = await fetch(`${API_BASE}/buildings/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(building),
+    });
+    if (!res.ok) throw new Error(`Failed to update building: ${res.statusText}`);
+    return res.json();
+  },
+
+  async deleteBuilding(id: string): Promise<{ status: string; building_id: string }> {
+    const res = await fetch(`${API_BASE}/buildings/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error(`Failed to delete building: ${res.statusText}`);
+    return res.json();
+  },
+
+  async validateBuilding(building: Building): Promise<BuildingValidationReport> {
+    const res = await fetch(`${API_BASE}/buildings/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(building),
+    });
+    if (!res.ok) throw new Error(`Failed to validate building: ${res.statusText}`);
+    return res.json();
+  },
+
+  async runBuildingSimulation(
+    id: string,
+    params: { occupant_count?: number; algorithm?: string; seed?: number }
+  ): Promise<SimulationState> {
+    const res = await fetch(`${API_BASE}/buildings/${encodeURIComponent(id)}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) throw new Error(`Failed to run building simulation: ${res.statusText}`);
+    return res.json();
   },
 };

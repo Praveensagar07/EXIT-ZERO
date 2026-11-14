@@ -400,7 +400,180 @@ def build_combined_emergency_scenario() -> ScenarioConfig:
     )
 
 
+def build_multifloor_demo_scenario() -> ScenarioConfig:
+    """
+    Scenario 7: EXIT-ZERO Multi-Floor Digital Twin Demo
+    3-floor healthcare & administration facility digital twin:
+      - F1: Lobby & Reception, Triage, Outpatient, 4 ground exits, 2 stairwells, 1 accessible ramp.
+      - F2: General Ward with Patient Rooms R-201 to R-208, ICU, 2 stair landings, 1 ramp landing.
+      - F3: Executive Administration, Boardrooms, IT & Server Hub with active hazard smoke/fire.
+    Total: 28 rooms, 12 corridors, 4 exits, 2 stairs, 1 ramp, capacity 720 occupants.
+    Demonstrates true 3D multi-floor agent navigation with wheelchair accessibility routing.
+    """
+    # Floor 1: Lobby & Ground Exits
+    floor_1 = Floor(
+        id="floor_1",
+        name="F1 - Lobby & Exits",
+        level=1,
+        elevation=0.0,
+        floor_height=3.2,
+        width=80.0,
+        height=45.0,
+        rooms=[
+            Room(id="R-101", floor_id="floor_1", name="Lobby & Reception", bounds=BoundingBox(x=5.0, y=5.0, width=14.0, height=10.0), room_type=RoomType.LOBBY, max_capacity=30),
+            Room(id="R-102", floor_id="floor_1", name="Triage & Intake", bounds=BoundingBox(x=21.0, y=5.0, width=12.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=20),
+            Room(id="R-103", floor_id="floor_1", name="Central Waiting Lounge", bounds=BoundingBox(x=35.0, y=5.0, width=16.0, height=10.0), room_type=RoomType.CAFETERIA, max_capacity=35),
+            Room(id="R-104", floor_id="floor_1", name="Security & Dispatch", bounds=BoundingBox(x=53.0, y=5.0, width=11.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=15),
+            Room(id="R-105", floor_id="floor_1", name="Facilities Depot", bounds=BoundingBox(x=66.0, y=5.0, width=10.0, height=10.0), room_type=RoomType.STORAGE, max_capacity=10),
+            Room(id="R-106", floor_id="floor_1", name="Pharmacy Dispensary", bounds=BoundingBox(x=5.0, y=30.0, width=14.0, height=10.0), room_type=RoomType.LAB, max_capacity=20),
+            Room(id="R-107", floor_id="floor_1", name="Records Archive", bounds=BoundingBox(x=21.0, y=30.0, width=12.0, height=10.0), room_type=RoomType.STORAGE, max_capacity=15),
+            Room(id="R-108", floor_id="floor_1", name="Outpatient Clinic A", bounds=BoundingBox(x=35.0, y=30.0, width=14.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=25),
+            Room(id="R-109", floor_id="floor_1", name="Restrooms & First Aid", bounds=BoundingBox(x=51.0, y=30.0, width=12.0, height=10.0), room_type=RoomType.RESTROOM, max_capacity=15),
+        ],
+        doorways=[
+            Doorway(id="D-101", floor_id="floor_1", x=12.0, y=15.0, width=1.4, connects_rooms=["R-101"]),
+            Doorway(id="D-102", floor_id="floor_1", x=27.0, y=15.0, width=1.2, connects_rooms=["R-102"]),
+            Doorway(id="D-103", floor_id="floor_1", x=43.0, y=15.0, width=2.0, connects_rooms=["R-103"]),
+            Doorway(id="D-104", floor_id="floor_1", x=58.0, y=15.0, width=1.2, connects_rooms=["R-104"]),
+            Doorway(id="D-105", floor_id="floor_1", x=71.0, y=15.0, width=1.1, connects_rooms=["R-105"]),
+            Doorway(id="D-106", floor_id="floor_1", x=12.0, y=30.0, width=1.3, connects_rooms=["R-106"]),
+            Doorway(id="D-107", floor_id="floor_1", x=27.0, y=30.0, width=1.2, connects_rooms=["R-107"]),
+            Doorway(id="D-108", floor_id="floor_1", x=42.0, y=30.0, width=1.5, connects_rooms=["R-108"]),
+            Doorway(id="D-109", floor_id="floor_1", x=57.0, y=30.0, width=1.2, connects_rooms=["R-109"]),
+        ],
+        exits=[
+            Exit(id="exit_north_main", floor_id="floor_1", name="Exit A: North Grand Portal", x=40.0, y=2.0, width=3.2, throughput_per_sec=3.2, is_wheelchair_accessible=True, is_blocked=False),
+            Exit(id="exit_east_fire", floor_id="floor_1", name="Exit B: East Fire Escape", x=77.0, y=22.5, width=2.0, throughput_per_sec=2.2, is_wheelchair_accessible=True, is_blocked=False),
+            Exit(id="exit_south_stair", floor_id="floor_1", name="Exit C: South Stair Exit", x=40.0, y=43.0, width=2.0, throughput_per_sec=1.8, is_wheelchair_accessible=False, is_blocked=False),
+            Exit(id="exit_west_ramp", floor_id="floor_1", name="Exit D: West Accessible Ramp", x=3.0, y=22.5, width=2.8, throughput_per_sec=2.8, is_wheelchair_accessible=True, is_blocked=False),
+        ],
+        stairwells=[
+            Stairwell(id="stair_east_1_2", from_floor="floor_1", to_floor="floor_2", x=68.0, y=22.5, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
+            Stairwell(id="stair_west_1_2", from_floor="floor_1", to_floor="floor_2", x=12.0, y=22.5, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
+            Stairwell(id="ramp_central_1_2", from_floor="floor_1", to_floor="floor_2", x=40.0, y=22.5, width=2.4, throughput_per_sec=2.4, is_wheelchair_accessible=True, is_ramp=True),
+        ]
+    )
+
+    # Floor 2: General Ward
+    floor_2 = Floor(
+        id="floor_2",
+        name="F2 - General Ward",
+        level=2,
+        elevation=3.2,
+        floor_height=3.2,
+        width=80.0,
+        height=45.0,
+        rooms=[
+            Room(id="R-201", floor_id="floor_2", name="Patient Room 201", bounds=BoundingBox(x=5.0, y=5.0, width=10.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=6),
+            Room(id="R-202", floor_id="floor_2", name="Patient Room 202", bounds=BoundingBox(x=17.0, y=5.0, width=10.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=6),
+            Room(id="R-203", floor_id="floor_2", name="Patient Room 203", bounds=BoundingBox(x=29.0, y=5.0, width=10.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=6),
+            Room(id="R-204", floor_id="floor_2", name="Patient Room 204", bounds=BoundingBox(x=41.0, y=5.0, width=10.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=6),
+            Room(id="R-205", floor_id="floor_2", name="Nurse Station & Monitoring", bounds=BoundingBox(x=53.0, y=5.0, width=12.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=20),
+            Room(id="R-206", floor_id="floor_2", name="Treatment Room 206", bounds=BoundingBox(x=67.0, y=5.0, width=10.0, height=10.0), room_type=RoomType.LAB, max_capacity=10),
+            Room(id="R-207", floor_id="floor_2", name="Patient Room 207", bounds=BoundingBox(x=5.0, y=30.0, width=12.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=8),
+            Room(id="R-208", floor_id="floor_2", name="Patient Room 208", bounds=BoundingBox(x=19.0, y=30.0, width=12.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=8),
+            Room(id="R-209", floor_id="floor_2", name="Intensive Care Unit", bounds=BoundingBox(x=33.0, y=30.0, width=16.0, height=10.0), room_type=RoomType.LAB, max_capacity=25),
+            Room(id="R-210", floor_id="floor_2", name="Staff Rest & Consultation", bounds=BoundingBox(x=51.0, y=30.0, width=14.0, height=10.0), room_type=RoomType.CONFERENCE, max_capacity=20),
+        ],
+        doorways=[
+            Doorway(id="D-201", floor_id="floor_2", x=10.0, y=15.0, width=1.2, connects_rooms=["R-201"]),
+            Doorway(id="D-202", floor_id="floor_2", x=22.0, y=15.0, width=1.2, connects_rooms=["R-202"]),
+            Doorway(id="D-203", floor_id="floor_2", x=34.0, y=15.0, width=1.2, connects_rooms=["R-203"]),
+            Doorway(id="D-204", floor_id="floor_2", x=46.0, y=15.0, width=1.4, connects_rooms=["R-204"]),
+            Doorway(id="D-205", floor_id="floor_2", x=59.0, y=15.0, width=1.8, connects_rooms=["R-205"]),
+            Doorway(id="D-206", floor_id="floor_2", x=72.0, y=15.0, width=1.2, connects_rooms=["R-206"]),
+            Doorway(id="D-207", floor_id="floor_2", x=11.0, y=30.0, width=1.2, connects_rooms=["R-207"]),
+            Doorway(id="D-208", floor_id="floor_2", x=25.0, y=30.0, width=1.2, connects_rooms=["R-208"]),
+            Doorway(id="D-209", floor_id="floor_2", x=41.0, y=30.0, width=1.8, connects_rooms=["R-209"]),
+            Doorway(id="D-210", floor_id="floor_2", x=58.0, y=30.0, width=1.4, connects_rooms=["R-210"]),
+        ],
+        exits=[],
+        stairwells=[
+            Stairwell(id="stair_east_2_3", from_floor="floor_2", to_floor="floor_3", x=68.0, y=22.5, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
+            Stairwell(id="stair_west_2_3", from_floor="floor_2", to_floor="floor_3", x=12.0, y=22.5, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
+            Stairwell(id="ramp_central_2_3", from_floor="floor_2", to_floor="floor_3", x=40.0, y=22.5, width=2.4, throughput_per_sec=2.4, is_wheelchair_accessible=True, is_ramp=True),
+        ]
+    )
+
+    # Floor 3: Administration
+    floor_3 = Floor(
+        id="floor_3",
+        name="F3 - Administration",
+        level=3,
+        elevation=6.4,
+        floor_height=3.2,
+        width=80.0,
+        height=45.0,
+        rooms=[
+            Room(id="R-301", floor_id="floor_3", name="Executive Boardroom", bounds=BoundingBox(x=5.0, y=5.0, width=14.0, height=10.0), room_type=RoomType.CONFERENCE, max_capacity=25),
+            Room(id="R-302", floor_id="floor_3", name="Dean & Director Suite", bounds=BoundingBox(x=21.0, y=5.0, width=12.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=15),
+            Room(id="R-303", floor_id="floor_3", name="Finance & Operations", bounds=BoundingBox(x=35.0, y=5.0, width=12.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=15),
+            Room(id="R-304", floor_id="floor_3", name="IT & Data Science Hub", bounds=BoundingBox(x=49.0, y=5.0, width=14.0, height=10.0), room_type=RoomType.LAB, max_capacity=20),
+            Room(id="R-305", floor_id="floor_3", name="Telecom & Server Rack", bounds=BoundingBox(x=65.0, y=5.0, width=10.0, height=10.0), room_type=RoomType.STORAGE, max_capacity=8),
+            Room(id="R-306", floor_id="floor_3", name="Human Resources 306", bounds=BoundingBox(x=5.0, y=30.0, width=14.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=16),
+            Room(id="R-307", floor_id="floor_3", name="Legal Counsel Office", bounds=BoundingBox(x=21.0, y=30.0, width=12.0, height=10.0), room_type=RoomType.OFFICE, max_capacity=12),
+            Room(id="R-308", floor_id="floor_3", name="Faculty Conference B", bounds=BoundingBox(x=35.0, y=30.0, width=16.0, height=10.0), room_type=RoomType.CONFERENCE, max_capacity=25),
+            Room(id="R-309", floor_id="floor_3", name="Administration Restrooms", bounds=BoundingBox(x=53.0, y=30.0, width=12.0, height=10.0), room_type=RoomType.RESTROOM, max_capacity=15),
+        ],
+        doorways=[
+            Doorway(id="D-301", floor_id="floor_3", x=12.0, y=15.0, width=1.4, connects_rooms=["R-301"]),
+            Doorway(id="D-302", floor_id="floor_3", x=27.0, y=15.0, width=1.2, connects_rooms=["R-302"]),
+            Doorway(id="D-303", floor_id="floor_3", x=41.0, y=15.0, width=1.2, connects_rooms=["R-303"]),
+            Doorway(id="D-304", floor_id="floor_3", x=56.0, y=15.0, width=1.4, connects_rooms=["R-304"]),
+            Doorway(id="D-305", floor_id="floor_3", x=70.0, y=15.0, width=1.1, connects_rooms=["R-305"]),
+            Doorway(id="D-306", floor_id="floor_3", x=12.0, y=30.0, width=1.3, connects_rooms=["R-306"]),
+            Doorway(id="D-307", floor_id="floor_3", x=27.0, y=30.0, width=1.2, connects_rooms=["R-307"]),
+            Doorway(id="D-308", floor_id="floor_3", x=43.0, y=30.0, width=1.6, connects_rooms=["R-308"]),
+            Doorway(id="D-309", floor_id="floor_3", x=59.0, y=30.0, width=1.2, connects_rooms=["R-309"]),
+        ],
+        exits=[],
+        stairwells=[]
+    )
+
+    building = Building(
+        id="bldg_multifloor_demo",
+        name="EXIT-ZERO Multi-Floor Demo",
+        description="High-fidelity 3-floor healthcare facility digital twin featuring Lobby, Inpatient Ward, and Executive Administration.",
+        author="EXIT-ZERO Digital Twin Platform",
+        version="2.0",
+        floors=[floor_1, floor_2, floor_3]
+    )
+
+    hazards = [
+        HazardSource(
+            id="fire_f3_server",
+            floor_id="floor_3",
+            x=68.0,
+            y=8.0,
+            hazard_type=HazardType.FIRE,
+            start_time_sec=8.0,
+            growth_rate=0.18,
+            max_radius=14.0,
+            intensity=0.9,
+        )
+    ]
+
+    spawn_zones = [
+        SpawnZone(id="sp_f1_lobby", floor_id="floor_1", name="F1 Lobby & Outpatient Crowd", bounds=BoundingBox(x=10.0, y=6.0, width=45.0, height=8.0), occupant_count=40, wheelchair_ratio=0.10, reduced_mobility_ratio=0.15),
+        SpawnZone(id="sp_f2_ward", floor_id="floor_2", name="F2 Ward Patients & Nursing Staff", bounds=BoundingBox(x=10.0, y=6.0, width=45.0, height=8.0), occupant_count=50, wheelchair_ratio=0.20, reduced_mobility_ratio=0.20),
+        SpawnZone(id="sp_f3_admin", floor_id="floor_3", name="F3 Executive Administration", bounds=BoundingBox(x=10.0, y=6.0, width=45.0, height=8.0), occupant_count=50, wheelchair_ratio=0.10, reduced_mobility_ratio=0.10),
+    ]
+
+    return ScenarioConfig(
+        id="scenario_multifloor_demo",
+        name="EXIT-ZERO Multi-Floor Demo",
+        description="Comprehensive 3-floor digital twin demonstration with multi-floor vertical egress, accessible ramps, stairwells, and predictive evacuation routing.",
+        building=building,
+        hazard_sources=hazards,
+        spawn_zones=spawn_zones,
+        events=[],
+        total_occupants=140,
+        default_seed=42,
+    )
+
+
 SCENARIO_REGISTRY: Dict[str, ScenarioConfig] = {
+    "scenario_multifloor_demo": build_multifloor_demo_scenario(),
     "scenario_normal_evacuation": build_normal_evacuation_scenario(),
     "scenario_sudden_exit_closure": build_scenario_a_sudden_exit_closure(),
     "scenario_congested_corridor": build_scenario_b_congested_corridor(),

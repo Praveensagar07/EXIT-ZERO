@@ -1,0 +1,32 @@
+# EXIT-ZERO Experimental Benchmark Export
+# Scenario ID,scenario_normal_evacuation
+# Scenario Name,Scenario 1: Normal Evacuation (All Exits Clear)
+# Occupants (N),40
+# Sample Size (Seeds),2
+# Evidence Tier,preliminary
+# Uncertainty Note,Fewer than 10 completed paired seeds; treat estimates and intervals as preliminary.
+# Timestamp,2026-11-14T09:00:20.324713+00:00
+
+SUMMARY_STATISTICS
+Metric,Baseline,Adaptive (EXIT-ZERO),Delta (Baseline - Adapt),Relative % Improvement
+Mean Total Evacuation Time (s),,,,N/A
+Median Total Evacuation Time (s),,,,N/A
+Std Dev Evacuation Time (s),,,N/A,N/A
+95% Bootstrap CI for Delta (s),,,"[None, None]",
+Permutation Test p-value,,,,Statistically Significant: NO
+Wins / Losses / Ties,Baseline Wins: 0,Adaptive Wins: 0,Ties: 2,
+Mean Peak Queue Reduction,,,-1.0,occupants
+Mean Peak Density Reduction,,,-0.58,pers/m²
+Mean Waiting Time Reduction,,,-0.04,seconds
+Mean Hazard Exposure Reduction,,,0.0,dosage
+Mean Adaptive Reroutes,,,0.0,reroutes/trial
+Mean Wheelchair Evacuation Time (s),,,,positive delta favors EXIT-ZERO
+Total Wall Benchmark Time (s),,,1.295,
+"Peak Python Heap (MB, tracemalloc)",,,1.05,
+"Peak Process RSS (MB, sampled)",,,87.83,
+Memory Measurement Note,,,Python heap is measured by tracemalloc; process RSS is sampled with psutil at simulation-step boundaries.,
+
+PER_SEED_TRIAL_DATA
+Seed,Winner,Base_Evac_Time_s,Adapt_Evac_Time_s,Delta_Time_s,Rel_Time_Imp_Pct,Base_Median_Time_s,Adapt_Median_Time_s,Base_Peak_Queue,Adapt_Peak_Queue,Delta_Peak_Queue,Base_Peak_Density,Adapt_Peak_Density,Delta_Peak_Density,Base_Wait_Time_s,Adapt_Wait_Time_s,Base_Hazard_Exposure,Adapt_Hazard_Exposure,Adapt_Reroutes,Base_Wheelchair_Mean_Evac_Time_s,Adapt_Wheelchair_Mean_Evac_Time_s,Delta_Wheelchair_Mean_Evac_Time_s,Base_Wall_ms,Adapt_Wall_ms,Peak_Process_RSS_MB
+201,tie,,,,,22.5,22.5,1,1,0,0.42,1.0,-0.58,0.06,0.07,0.0,0.0,0,24.33,24.33,0.0,189.59,411.79,87.83
+202,tie,,,,,22.0,22.5,1,3,-2,0.42,1.0,-0.58,0.03,0.11,0.0,0.0,0,,,,217.66,469.92,87.82

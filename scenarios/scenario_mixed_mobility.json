@@ -6,11 +6,15 @@
     "id": "bldg_hq_d",
     "name": "Apex Innovation HQ (Scenario D)",
     "description": "Accessibility-aware routing demonstration",
+    "author": "EXIT-ZERO Studio",
+    "version": "1.0",
     "floors": [
       {
         "id": "floor_d",
         "name": "Ground Operations & Corporate Suites",
         "level": 1,
+        "elevation": 0.0,
+        "floor_height": 3.2,
         "width": 80.0,
         "height": 45.0,
         "rooms": [
@@ -25,7 +29,9 @@
               "height": 10.0
             },
             "room_type": "office",
-            "max_capacity": 10
+            "max_capacity": 10,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "room_102",
@@ -38,7 +44,9 @@
               "height": 10.0
             },
             "room_type": "office",
-            "max_capacity": 12
+            "max_capacity": 12,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "room_103",
@@ -51,7 +59,9 @@
               "height": 10.0
             },
             "room_type": "conference",
-            "max_capacity": 25
+            "max_capacity": 25,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "room_104",
@@ -64,7 +74,9 @@
               "height": 10.0
             },
             "room_type": "lab",
-            "max_capacity": 15
+            "max_capacity": 15,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "room_105",
@@ -77,7 +89,9 @@
               "height": 10.0
             },
             "room_type": "storage",
-            "max_capacity": 5
+            "max_capacity": 5,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "room_hub",
@@ -90,7 +104,9 @@
               "height": 11.0
             },
             "room_type": "cafeteria",
-            "max_capacity": 45
+            "max_capacity": 45,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "room_201",
@@ -103,7 +119,9 @@
               "height": 10.0
             },
             "room_type": "office",
-            "max_capacity": 18
+            "max_capacity": 18,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "room_202",
@@ -116,7 +134,9 @@
               "height": 10.0
             },
             "room_type": "office",
-            "max_capacity": 14
+            "max_capacity": 14,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "room_203",
@@ -129,7 +149,9 @@
               "height": 10.0
             },
             "room_type": "conference",
-            "max_capacity": 20
+            "max_capacity": 20,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "room_204",
@@ -142,7 +164,9 @@
               "height": 10.0
             },
             "room_type": "office",
-            "max_capacity": 12
+            "max_capacity": 12,
+            "height": 3.2,
+            "is_accessible": true
           },
           {
             "id": "room_205",
@@ -155,7 +179,9 @@
               "height": 10.0
             },
             "room_type": "restroom",
-            "max_capacity": 10
+            "max_capacity": 10,
+            "height": 3.2,
+            "is_accessible": true
           }
         ],
         "doorways": [
@@ -433,7 +459,10 @@
             "y": 41.0,
             "width": 1.8,
             "throughput_per_sec": 1.5,
-            "is_wheelchair_accessible": false
+            "is_wheelchair_accessible": false,
+            "is_ramp": false,
+            "target_x": null,
+            "target_y": null
           }
         ]
       }
@@ -480,6 +509,7 @@
     "w_hazard": 8.0,
     "w_reroute": 5.0,
     "w_accessibility": 1000.0,
+    "w_accessibility_reservation": 0.0,
     "hysteresis_threshold": 0.2,
     "replan_interval_sec": 4.0,
     "prediction_horizon_sec": 20.0
