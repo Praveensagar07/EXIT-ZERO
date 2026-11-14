@@ -153,3 +153,81 @@ def test_building_studio_endpoints_crud_and_validation():
     # 6. Delete custom building cleanup
     del_resp = client.delete("/api/buildings/bldg_test_studio_custom")
     assert del_resp.status_code == 200
+
+
+def test_continuous_multifloor_descent_and_elevation_tracking():
+    """
+    Verifies that agents starting on upper floors (Floor 3) genuinely
+    traverse intermediate floors (Floor 2) to reach ground exits (Floor 1),
+    and that vertical elevations (z) and floor_ids update continuously without teleportation.
+    """
+    sc = get_scenario("scenario_multifloor_demo")
+    engine = SimulationEngine(sc, algorithm=AlgorithmType.ADAPTIVE, seed=42)
+
+    # Initial state: occupants exist across all 3 floors
+    floor_3_occs = [o for o in engine.occupants if o.floor_id == "floor_3"]
+    assert len(floor_3_occs) > 0
+    initial_z = {o.id: o.z for o in floor_3_occs}
+    assert all(z == 6.4 for z in initial_z.values())
+
+    # Step through simulation and record continuous z transitions
+    intermediate_z_observed = False
+    reached_floor_2 = False
+    reached_floor_1 = False
+
+    for step_num in range(80):  # 40 seconds of simulation
+        engine.step(dt=0.5)
+
+        for occ_id in initial_z.keys():
+            occ = next(o for o in engine.occupants if o.id == occ_id)
+
+            # Check for smooth continuous elevation along stairs/ramps
+            if 0.0 < occ.z < 6.4 and occ.z != 3.2:
+                intermediate_z_observed = True
+
+            if occ.floor_id == "floor_2":
+                reached_floor_2 = True
+            elif occ.floor_id == "floor_1":
+                reached_floor_1 = True
+
+    # Confirm genuine continuous vertical transition across levels
+    assert intermediate_z_observed, "Agents must smoothly interpolate z along stairwell/ramp edges"
+    assert reached_floor_2, "Agents from Floor 3 must transition through Floor 2"
+    assert reached_floor_1, "Agents must ultimately descend to Floor 1 egress corridors"
+
+
+def test_multifloor_all_floors_simulated_simultaneously():
+    """
+    Verifies that the simulation engine processes crowd physics and agent
+    movement across all active floors simultaneously, not merely on a single active floor.
+    """
+    sc = get_scenario("scenario_multifloor_demo")
+    engine = SimulationEngine(sc, algorithm=AlgorithmType.ADAPTIVE, seed=42)
+
+    initial_pos = {o.id: (o.x, o.y, o.z) for o in engine.occupants}
+
+    # Step simulation 5 times
+    for _ in range(5):
+        engine.step(dt=0.5)
+
+    # Check movement across each distinct floor
+    f1_moved = any(
+        (o.x, o.y, o.z) != initial_pos[o.id]
+        for o in engine.occupants
+        if o.floor_id == "floor_1"
+    )
+    f2_moved = any(
+        (o.x, o.y, o.z) != initial_pos[o.id]
+        for o in engine.occupants
+        if o.floor_id == "floor_2"
+    )
+    f3_moved = any(
+        (o.x, o.y, o.z) != initial_pos[o.id]
+        for o in engine.occupants
+        if o.floor_id == "floor_3"
+    )
+
+    assert f1_moved, "Floor 1 agents must simulate and move"
+    assert f2_moved, "Floor 2 agents must simulate and move"
+    assert f3_moved, "Floor 3 agents must simulate and move simultaneously"
+

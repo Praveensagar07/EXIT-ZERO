@@ -325,39 +325,39 @@
             "from_floor": "floor_1",
             "to_floor": "floor_2",
             "x": 68.0,
-            "y": 22.5,
+            "y": 20.0,
             "width": 1.8,
             "throughput_per_sec": 1.8,
             "is_wheelchair_accessible": false,
             "is_ramp": false,
-            "target_x": null,
-            "target_y": null
+            "target_x": 68.0,
+            "target_y": 25.0
           },
           {
             "id": "stair_west_1_2",
             "from_floor": "floor_1",
             "to_floor": "floor_2",
             "x": 12.0,
-            "y": 22.5,
+            "y": 20.0,
             "width": 1.8,
             "throughput_per_sec": 1.8,
             "is_wheelchair_accessible": false,
             "is_ramp": false,
-            "target_x": null,
-            "target_y": null
+            "target_x": 12.0,
+            "target_y": 25.0
           },
           {
             "id": "ramp_central_1_2",
             "from_floor": "floor_1",
             "to_floor": "floor_2",
-            "x": 40.0,
+            "x": 37.0,
             "y": 22.5,
             "width": 2.4,
             "throughput_per_sec": 2.4,
             "is_wheelchair_accessible": true,
             "is_ramp": true,
-            "target_x": null,
-            "target_y": null
+            "target_x": 43.0,
+            "target_y": 22.5
           }
         ]
       },
@@ -651,39 +651,39 @@
             "from_floor": "floor_2",
             "to_floor": "floor_3",
             "x": 68.0,
-            "y": 22.5,
+            "y": 20.0,
             "width": 1.8,
             "throughput_per_sec": 1.8,
             "is_wheelchair_accessible": false,
             "is_ramp": false,
-            "target_x": null,
-            "target_y": null
+            "target_x": 68.0,
+            "target_y": 25.0
           },
           {
             "id": "stair_west_2_3",
             "from_floor": "floor_2",
             "to_floor": "floor_3",
             "x": 12.0,
-            "y": 22.5,
+            "y": 20.0,
             "width": 1.8,
             "throughput_per_sec": 1.8,
             "is_wheelchair_accessible": false,
             "is_ramp": false,
-            "target_x": null,
-            "target_y": null
+            "target_x": 12.0,
+            "target_y": 25.0
           },
           {
             "id": "ramp_central_2_3",
             "from_floor": "floor_2",
             "to_floor": "floor_3",
-            "x": 40.0,
+            "x": 37.0,
             "y": 22.5,
             "width": 2.4,
             "throughput_per_sec": 2.4,
             "is_wheelchair_accessible": true,
             "is_ramp": true,
-            "target_x": null,
-            "target_y": null
+            "target_x": 43.0,
+            "target_y": 22.5
           }
         ]
       },

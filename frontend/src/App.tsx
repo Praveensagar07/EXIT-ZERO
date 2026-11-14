@@ -52,6 +52,7 @@ export function App() {
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>('scenario_multifloor_demo');
   const [building, setBuilding] = useState<Building | null>(null);
   const [activeFloorId, setActiveFloorId] = useState<string>('floor_2');
+  const [followOccupantId, setFollowOccupantId] = useState<string | null>(null);
 
   // Simulation Parameters
   const [algorithm, setAlgorithm] = useState<AlgorithmType>('adaptive');
@@ -68,6 +69,25 @@ export function App() {
   const [metrics, setMetrics] = useState<SimulationMetrics | null>(null);
   const [audit, setAudit] = useState<TopologyAuditReport | null>(null);
   const [rerouteEvents, setRerouteEvents] = useState<RerouteEvent[]>([]);
+
+  // Toggle exit blockage
+  const handleToggleExit = useCallback(
+    async (exitId: string) => {
+      if (!sessionId) return;
+      try {
+        const state = await api.toggleExitBlock(sessionId, exitId);
+        setGraph(state.graph);
+        setOccupants(state.occupants);
+        setExits(state.exits);
+        setHazards(state.hazards);
+        setMetrics(state.metrics);
+        if (state.reroute_events) setRerouteEvents(state.reroute_events);
+      } catch (err) {
+        console.error('Failed to toggle exit:', err);
+      }
+    },
+    [sessionId]
+  );
 
   // Playback & Timing
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -88,26 +108,7 @@ export function App() {
     id: string;
     floorId: string;
     data: any;
-  } | null>({
-    type: 'room',
-    id: 'R-204',
-    floorId: 'floor_2',
-    data: {
-      id: 'R-204',
-      name: 'Room - F2-204',
-      room_type: 'Patient Room',
-      area: 36.0,
-      capacity: 6,
-      currentOccupants: 4,
-      accessible: true,
-      connectedTo: 'Corridor F2-C05',
-      nearestExit: 'East Exit (F1) - 24.6 m',
-      altExit: 'North Exit (F1) - 28.9 m',
-      avgSpeed: 0.75,
-      egressTime: 32.8,
-      routeStatus: 'Clear',
-    },
-  });
+  } | null>(null);
 
   const [activeInspectorTab, setActiveInspectorTab] = useState<'overview' | 'occupancy' | 'safety'>('overview');
 
@@ -393,7 +394,7 @@ export function App() {
           /* Live Simulation Workspace matching Image 2 */
           <div className="flex flex-1 min-w-0 overflow-hidden">
             {/* Secondary Left Sidebar */}
-            <aside className="w-64 bg-white border-r border-[#E5E7EB] flex flex-col overflow-y-auto shrink-0 select-none">
+            <aside className="hidden md:flex w-64 bg-white border-r border-[#E5E7EB] flex-col overflow-y-auto shrink-0 select-none">
               {/* Current Building Dropdown */}
               <div className="p-4 border-b border-[#E5E7EB]">
                 <label className="block text-[11px] font-semibold text-[#647078] uppercase tracking-wider mb-1.5">
@@ -587,6 +588,10 @@ export function App() {
                     showHazards={showHazards}
                     showExits={showExits}
                     showRoomLabels={showRoomLabels}
+                    isRunning={isRunning}
+                    speedMultiplier={speedMultiplier}
+                    followOccupantId={followOccupantId}
+                    onToggleFollowOccupant={setFollowOccupantId}
                   />
                 ) : (
                   <FloorPlanViewport
@@ -693,14 +698,30 @@ export function App() {
               </div>
             </main>
 
-            {/* Right Inspector Panel matching Image 2 */}
-            <aside className="w-80 bg-white border-l border-[#E5E7EB] flex flex-col overflow-y-auto shrink-0 select-none">
+            {/* Right Inspector Panel - Dynamic Type-Specific Telemetry */}
+            <aside className="hidden lg:flex w-84 bg-white border-l border-[#E5E7EB] flex-col overflow-y-auto shrink-0 select-none">
               <div className="p-4 border-b border-[#E5E7EB]">
-                <h3 className="text-sm font-semibold text-[#242A30] mb-3">
-                  Selected Area: {selectedElement?.data?.name || selectedElement?.id || 'Room - F2-204'}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#167D73] bg-[#E6F4F2] px-2 py-0.5 rounded">
+                    {selectedElement ? `${selectedElement.type.toUpperCase()} INSPECTOR` : 'BUILDING OVERVIEW'}
+                  </span>
+                  {selectedElement && (
+                    <button
+                      onClick={() => setSelectedElement(null)}
+                      className="text-xs text-[#647078] hover:text-[#242A30] font-bold px-1.5 py-0.5 rounded hover:bg-[#F3F4F6]"
+                      title="Clear Selection"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <h3 className="text-sm font-bold text-[#242A30] truncate">
+                  {selectedElement?.data?.name || selectedElement?.id || building?.name || 'Multi-Floor Facility'}
                 </h3>
+
                 {/* Tabs: Overview, Occupancy, Safety */}
-                <div className="flex border-b border-[#E5E7EB]">
+                <div className="flex border-b border-[#E5E7EB] mt-3">
                   <button
                     onClick={() => setActiveInspectorTab('overview')}
                     className={`flex-1 py-1.5 text-xs font-medium border-b-2 text-center transition-colors ${
@@ -734,83 +755,296 @@ export function App() {
                 </div>
               </div>
 
-              {/* Inspector Content */}
+              {/* Inspector Dynamic Content */}
               <div className="p-4 space-y-4 text-xs">
                 {activeInspectorTab === 'overview' ? (
                   <>
-                    {/* Key Properties Grid */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
-                        <span className="text-[#647078]">Type</span>
-                        <span className="font-medium text-[#242A30]">
-                          {selectedElement?.data?.room_type || 'Patient Room'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
-                        <span className="text-[#647078]">Floor</span>
-                        <span className="font-medium text-[#242A30]">F2 - General Ward</span>
-                      </div>
-                      <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
-                        <span className="text-[#647078]">Area</span>
-                        <span className="font-medium text-[#242A30]">36.0 m²</span>
-                      </div>
-                      <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
-                        <span className="text-[#647078]">Capacity</span>
-                        <span className="font-medium text-[#242A30]">6 occupants</span>
-                      </div>
-                      <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
-                        <span className="text-[#647078]">Current Occupants</span>
-                        <span className="font-medium text-[#242A30]">
-                          {occupants.filter((o) => o.floor_id === (selectedElement?.floorId || 'floor_2')).length > 0
-                            ? Math.min(6, Math.max(2, Math.floor(occupants.length * 0.05)))
-                            : 0}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
-                        <span className="text-[#647078]">Accessible</span>
-                        <span className="font-medium text-[#167D73] flex items-center gap-1">
-                          <Accessibility className="w-3.5 h-3.5" /> Yes
-                        </span>
-                      </div>
-                    </div>
+                    {/* Case 1: Exit Selected */}
+                    {selectedElement?.type === 'exit' ? (
+                      (() => {
+                        const exit = exits.find((e) => e.id === selectedElement.id) || selectedElement.data;
+                        const floorName = building?.floors.find((f) => f.id === exit.floor_id)?.name || 'Ground Level';
+                        const queuedCount = occupants.filter((o) => o.target_exit_id === exit.id && o.evacuation_state === 'waiting').length;
+                        const targetingCount = occupants.filter((o) => o.target_exit_id === exit.id && o.evacuation_state === 'evacuating').length;
 
-                    {/* Connectivity Section */}
-                    <div className="pt-2 border-t border-[#E5E7EB] space-y-2">
-                      <span className="block font-semibold text-[11px] text-[#242A30] uppercase">Connectivity</span>
-                      <div className="flex items-center justify-between text-[#647078]">
-                        <span>Connected To</span>
-                        <span className="font-medium text-[#242A30]">Corridor F2-C05</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[#647078]">
-                        <span>Nearest Exit</span>
-                        <span className="font-medium text-[#242A30]">East Exit (F1) - 24.6 m</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[#647078]">
-                        <span>Alternative Exit</span>
-                        <span className="font-medium text-[#242A30]">North Exit (F1) - 28.9 m</span>
-                      </div>
-                    </div>
+                        return (
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Element Type</span>
+                                <span className="font-semibold text-[#242A30]">Emergency Egress Exit</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Status</span>
+                                <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                                  exit.is_blocked ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                                }`}>
+                                  {exit.is_blocked ? 'BLOCKED / CLOSED' : 'OPERATIONAL / OPEN'}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Floor</span>
+                                <span className="font-medium text-[#242A30]">{floorName}</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Discharge Width</span>
+                                <span className="font-medium text-[#242A30]">{(exit.width || 2.4).toFixed(1)} m</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Flow Capacity</span>
+                                <span className="font-medium text-[#242A30]">{(exit.throughput_per_sec || 2.0).toFixed(1)} peds/s</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Accessibility</span>
+                                <span className={`font-medium ${exit.is_wheelchair_accessible ? 'text-[#167D73]' : 'text-amber-700'}`}>
+                                  {exit.is_wheelchair_accessible ? 'ADA Compliant (Ramped)' : 'Stairs Only'}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Queued Occupants</span>
+                                <span className="font-bold text-[#242A30]">{queuedCount} persons</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">En Route Evacuees</span>
+                                <span className="font-bold text-[#167D73]">{targetingCount} persons</span>
+                              </div>
+                            </div>
 
-                    {/* Evacuation Section */}
-                    <div className="pt-2 border-t border-[#E5E7EB] space-y-2">
-                      <span className="block font-semibold text-[11px] text-[#242A30] uppercase">Evacuation</span>
-                      <div className="flex items-center justify-between text-[#647078]">
-                        <span>Average Speed</span>
-                        <span className="font-medium text-[#242A30]">
-                          {metrics?.mean_occupant_speed ? `${metrics.mean_occupant_speed.toFixed(2)} m/s` : '0.75 m/s'}
-                        </span>
+                            {/* Emergency Override Interactive Button */}
+                            <div className="pt-2">
+                              <button
+                                onClick={() => handleToggleExit(exit.id)}
+                                className={`w-full py-2 px-3 rounded-md text-xs font-bold text-white transition-colors shadow-xs ${
+                                  exit.is_blocked
+                                    ? 'bg-[#167D73] hover:bg-[#126860]'
+                                    : 'bg-red-600 hover:bg-red-700'
+                                }`}
+                              >
+                                {exit.is_blocked ? '✓ Reopen Emergency Exit' : '⚠️ Emergency Close / Block Exit'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : selectedElement?.type === 'room' ? (
+                      (() => {
+                        const room = selectedElement.data || {};
+                        const floorName = building?.floors.find((f) => f.id === (room.floor_id || selectedElement.floorId))?.name || 'Main Floor';
+                        const rw = room.bounds?.width ?? room.width ?? 6.0;
+                        const rh = room.bounds?.height ?? room.height ?? 6.0;
+                        const rx = room.bounds?.x ?? 0.0;
+                        const ry = room.bounds?.y ?? 0.0;
+                        const occCount = occupants.filter((o) =>
+                          o.current_node_id === `node_room_${room.id}` ||
+                          (o.x >= rx && o.x <= rx + rw && o.y >= ry && o.y <= ry + rh)
+                        ).length;
+
+                        return (
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Room Type</span>
+                                <span className="font-semibold text-[#242A30] capitalize">{room.room_type || 'Office'}</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Floor</span>
+                                <span className="font-medium text-[#242A30]">{floorName}</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Dimensions</span>
+                                <span className="font-medium text-[#242A30]">
+                                  {rw.toFixed(1)}m × {rh.toFixed(1)}m
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Floor Area</span>
+                                <span className="font-medium text-[#242A30]">{(rw * rh).toFixed(1)} m²</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Max Capacity</span>
+                                <span className="font-medium text-[#242A30]">{room.max_capacity || 6} occupants</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Current Occupants</span>
+                                <span className="font-bold text-[#167D73]">{occCount} occupants</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Accessibility</span>
+                                <span className="font-medium text-[#167D73] flex items-center gap-1">
+                                  <Accessibility className="w-3.5 h-3.5" />
+                                  {room.is_accessible ?? true ? 'Wheelchair Accessible' : 'Standard'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : selectedElement?.type === 'occupant' ? (
+                      (() => {
+                        const occ = occupants.find((o) => o.id === selectedElement.id) || selectedElement.data;
+                        const floorName = building?.floors.find((f) => f.id === occ.floor_id)?.name || 'Ground Floor';
+                        const isTracking = followOccupantId === occ.id;
+
+                        return (
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Mobility Classification</span>
+                                <span className={`font-semibold ${
+                                  occ.mobility_category === 'wheelchair' ? 'text-[#0284c7]' : 'text-[#242A30]'
+                                }`}>
+                                  {occ.mobility_category === 'wheelchair'
+                                    ? '♿ Wheelchair User'
+                                    : occ.mobility_category === 'reduced_speed'
+                                    ? 'Reduced Speed'
+                                    : 'Standard Ambulatory'}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Evacuation State</span>
+                                <span className={`font-bold px-2 py-0.5 rounded text-[11px] capitalize ${
+                                  occ.evacuation_state === 'exited'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : occ.evacuation_state === 'trapped'
+                                    ? 'bg-red-100 text-red-700'
+                                    : occ.evacuation_state === 'waiting'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {occ.evacuation_state}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Current Floor</span>
+                                <span className="font-medium text-[#242A30]">{floorName}</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">3D Coordinates (X, Y, Z)</span>
+                                <span className="font-mono text-[#242A30]">
+                                  {occ.x.toFixed(1)}m, {occ.y.toFixed(1)}m, {(occ.z ?? 0).toFixed(1)}m
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Velocity</span>
+                                <span className="font-bold text-[#242A30]">
+                                  {occ.movement_speed.toFixed(2)} m/s (Free: {occ.free_speed.toFixed(2)} m/s)
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Distance Traveled</span>
+                                <span className="font-medium text-[#242A30]">{occ.distance_traveled.toFixed(1)} m</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Hazard Exposure</span>
+                                <span className={`font-medium ${occ.hazard_exposure > 0 ? 'text-red-600 font-bold' : 'text-[#647078]'}`}>
+                                  {(occ.hazard_exposure || 0).toFixed(3)} dosage
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Adaptive Reroutes</span>
+                                <span className="font-medium text-[#167D73]">{occ.reroute_count || 0}</span>
+                              </div>
+                            </div>
+
+                            {/* Camera Follow Toggle */}
+                            <div className="pt-2">
+                              <button
+                                onClick={() => setFollowOccupantId(isTracking ? null : occ.id)}
+                                className={`w-full py-2 px-3 rounded-md text-xs font-bold text-white transition-colors shadow-xs ${
+                                  isTracking ? 'bg-[#D97706] hover:bg-[#B45309]' : 'bg-[#167D73] hover:bg-[#126860]'
+                                }`}
+                              >
+                                {isTracking ? '✕ Stop Following Agent' : '🎥 Follow Agent in 3D Viewport'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : selectedElement?.type === 'stair' ? (
+                      (() => {
+                        const stair = selectedElement.data;
+                        const fromFloor = building?.floors.find((f) => f.id === stair.from_floor)?.name || stair.from_floor;
+                        const toFloor = building?.floors.find((f) => f.id === stair.to_floor)?.name || stair.to_floor;
+                        const isRamp = stair.is_ramp || stair.is_wheelchair_accessible;
+
+                        return (
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Connector Type</span>
+                                <span className="font-semibold text-[#242A30]">
+                                  {isRamp ? '♿ Accessible Incline Ramp' : 'Staircase Flight'}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Levels Connected</span>
+                                <span className="font-medium text-[#242A30]">{fromFloor} ↔ {toFloor}</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Passage Width</span>
+                                <span className="font-medium text-[#242A30]">{(stair.width || 1.8).toFixed(1)} m</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Throughput Rating</span>
+                                <span className="font-medium text-[#242A30]">{(stair.throughput_per_sec || 1.8).toFixed(1)} peds/s</span>
+                              </div>
+                              <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                                <span className="text-[#647078]">Wheelchair Allowed</span>
+                                <span className={`font-medium ${isRamp ? 'text-[#167D73]' : 'text-red-600'}`}>
+                                  {isRamp ? 'Yes (Compliant Slope)' : 'No (Steps Inaccessible)'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      /* Default Building Overview */
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                            <span className="text-[#647078]">Facility Complex</span>
+                            <span className="font-bold text-[#242A30]">{building?.name || 'Healthcare Wing'}</span>
+                          </div>
+                          <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                            <span className="text-[#647078]">Building Stories</span>
+                            <span className="font-medium text-[#242A30]">{building?.floors.length || 1} Floors</span>
+                          </div>
+                          <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                            <span className="text-[#647078]">Total Rooms</span>
+                            <span className="font-medium text-[#242A30]">
+                              {building?.floors.reduce((acc, f) => acc + (f.rooms?.length || 0), 0) || 0} Rooms
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                            <span className="text-[#647078]">Ground Exterior Exits</span>
+                            <span className="font-bold text-[#167D73]">{exits.length} Exits</span>
+                          </div>
+                          <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                            <span className="text-[#647078]">Active Evacuees</span>
+                            <span className="font-bold text-[#242A30]">
+                              {occupants.filter((o) => o.evacuation_state === 'evacuating').length} occupants
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                            <span className="text-[#647078]">Wheelchair Evacuees</span>
+                            <span className="font-semibold text-[#0284c7]">
+                              {occupants.filter((o) => o.mobility_category === 'wheelchair').length} occupants
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between py-1 border-b border-[#F3F4F6]">
+                            <span className="text-[#647078]">Evacuated Safely</span>
+                            <span className="font-bold text-emerald-700">
+                              {evacuatedCount} / {totalOccupants} ({completionPct}%)
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-[#F9FAFB] rounded border border-[#E5E7EB] text-[#647078] leading-relaxed">
+                          💡 <strong>Interactive Inspection:</strong> Click on any room, door, staircase, emergency exit, or evacuating human figure in the 3D viewport to inspect live properties.
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between text-[#647078]">
-                        <span>Estimated Egress Time</span>
-                        <span className="font-medium text-[#242A30]">32.8 s</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[#647078]">
-                        <span>Route Status</span>
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#DCFCE7] text-[#15803D]">
-                          Clear
-                        </span>
-                      </div>
-                    </div>
+                    )}
                   </>
                 ) : activeInspectorTab === 'occupancy' ? (
                   <div className="space-y-3">

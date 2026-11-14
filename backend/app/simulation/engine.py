@@ -855,7 +855,14 @@ class SimulationEngine:
                 occ.x = round(occ.x + nx_dir * step_dist, 2)
                 occ.y = round(occ.y + ny_dir * step_dist, 2)
                 occ.z = round(occ.z + nz_dir * step_dist, 2)
-                occ.floor_id = target_node.floor_id
+                if self.is_multifloor:
+                    closest_floor = min(
+                        self.scenario.building.floors,
+                        key=lambda f: abs(getattr(f, "elevation", 0.0) - occ.z),
+                    )
+                    occ.floor_id = closest_floor.id
+                else:
+                    occ.floor_id = target_node.floor_id
                 occ.distance_traveled = round(occ.distance_traveled + step_dist, 2)
 
         # 6. Service Doorway and Exit Queues with Fractional Capacity Accumulation

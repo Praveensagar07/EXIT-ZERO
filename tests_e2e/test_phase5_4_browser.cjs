@@ -95,7 +95,7 @@ async function runPhase54BrowserValidation() {
       const timeText = await page.locator('text=Simulation Time').locator('..').textContent();
       recordResult('Test 3.1: Simulation Run & Digital Timer', !timeText.includes('00:00'), `Time progressed: ${timeText.replace('Simulation Time', '').trim()}`);
 
-      const evacText = await page.locator('text=Evacuated').locator('..').textContent();
+      const evacText = await page.locator('text=Evacuated').first().locator('..').textContent();
       recordResult('Test 3.2: Evacuation Progress Tracking', evacText.includes('/'), `Evacuated status: ${evacText.replace('Evacuated', '').trim()}`);
 
       const pauseBtn = page.locator('button[title="Pause"]');

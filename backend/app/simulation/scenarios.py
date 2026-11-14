@@ -448,9 +448,9 @@ def build_multifloor_demo_scenario() -> ScenarioConfig:
             Exit(id="exit_west_ramp", floor_id="floor_1", name="Exit D: West Accessible Ramp", x=3.0, y=22.5, width=2.8, throughput_per_sec=2.8, is_wheelchair_accessible=True, is_blocked=False),
         ],
         stairwells=[
-            Stairwell(id="stair_east_1_2", from_floor="floor_1", to_floor="floor_2", x=68.0, y=22.5, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
-            Stairwell(id="stair_west_1_2", from_floor="floor_1", to_floor="floor_2", x=12.0, y=22.5, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
-            Stairwell(id="ramp_central_1_2", from_floor="floor_1", to_floor="floor_2", x=40.0, y=22.5, width=2.4, throughput_per_sec=2.4, is_wheelchair_accessible=True, is_ramp=True),
+            Stairwell(id="stair_east_1_2", from_floor="floor_1", to_floor="floor_2", x=68.0, y=20.0, target_x=68.0, target_y=25.0, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
+            Stairwell(id="stair_west_1_2", from_floor="floor_1", to_floor="floor_2", x=12.0, y=20.0, target_x=12.0, target_y=25.0, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
+            Stairwell(id="ramp_central_1_2", from_floor="floor_1", to_floor="floor_2", x=37.0, y=22.5, target_x=43.0, target_y=22.5, width=2.4, throughput_per_sec=2.4, is_wheelchair_accessible=True, is_ramp=True),
         ]
     )
 
@@ -489,9 +489,9 @@ def build_multifloor_demo_scenario() -> ScenarioConfig:
         ],
         exits=[],
         stairwells=[
-            Stairwell(id="stair_east_2_3", from_floor="floor_2", to_floor="floor_3", x=68.0, y=22.5, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
-            Stairwell(id="stair_west_2_3", from_floor="floor_2", to_floor="floor_3", x=12.0, y=22.5, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
-            Stairwell(id="ramp_central_2_3", from_floor="floor_2", to_floor="floor_3", x=40.0, y=22.5, width=2.4, throughput_per_sec=2.4, is_wheelchair_accessible=True, is_ramp=True),
+            Stairwell(id="stair_east_2_3", from_floor="floor_2", to_floor="floor_3", x=68.0, y=20.0, target_x=68.0, target_y=25.0, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
+            Stairwell(id="stair_west_2_3", from_floor="floor_2", to_floor="floor_3", x=12.0, y=20.0, target_x=12.0, target_y=25.0, width=1.8, throughput_per_sec=1.8, is_wheelchair_accessible=False),
+            Stairwell(id="ramp_central_2_3", from_floor="floor_2", to_floor="floor_3", x=37.0, y=22.5, target_x=43.0, target_y=22.5, width=2.4, throughput_per_sec=2.4, is_wheelchair_accessible=True, is_ramp=True),
         ]
     )
 
