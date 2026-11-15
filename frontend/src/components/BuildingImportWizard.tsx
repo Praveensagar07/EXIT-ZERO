@@ -78,10 +78,10 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-bold text-[#242A30]">
-                Building Import & Digital Twin Generator
+                Building Reference & Navigation Scaffold
               </h2>
               <p className="text-xs text-[#647078]">
-                BIM / CAD 3D Mesh to Navigable Simulation Digital Twin
+                Bounds-based simulation authoring; source geometry is not decoded
               </p>
             </div>
           </div>
@@ -125,13 +125,13 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
                 Step 1: Select 3D Architectural Format
               </h3>
               <p className="text-xs text-[#647078]">
-                Choose your source CAD / BIM format. EXIT-ZERO parses binary GLB, structured GLTF, and scenario JSON models.
+                Record the reference format. This build does not decode GLTF/GLB/CAD geometry; only structured EXIT-ZERO JSON contains authored rooms, doors, and stairs.
               </p>
               <div className="grid grid-cols-3 gap-3 pt-2">
                 {[
-                  { id: 'gltf', title: 'GLTF (JSON + Bin)', desc: 'Standard architectural exchange format with clear mesh hierarchy' },
-                  { id: 'glb', title: 'GLB (Binary)', desc: 'Compact single-file binary 3D container with embedded materials' },
-                  { id: 'json', title: 'EXIT-ZERO JSON', desc: 'Direct schema specification with rooms, doors, and stairs' },
+                  { id: 'gltf', title: 'GLTF Reference', desc: 'Reference label only; mesh geometry is not parsed' },
+                  { id: 'glb', title: 'GLB Reference', desc: 'Reference label only; binary geometry is not parsed' },
+                  { id: 'json', title: 'EXIT-ZERO JSON', desc: 'Supported structured rooms, doors, exits, and stairs' },
                 ].map((fmt) => (
                   <div
                     key={fmt.id}
@@ -154,15 +154,15 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
           {currentStep === 2 && (
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-[#242A30]">
-                Step 2: Upload 3D Building Model
+                Step 2: Reference Metadata
               </h3>
               <div className="border-2 border-dashed border-[#CBD5E1] rounded-xl p-8 bg-white flex flex-col items-center justify-center text-center">
                 <Upload className="w-10 h-10 text-[#167D73] mb-3" />
                 <p className="text-xs font-semibold text-[#242A30] mb-1">
-                  Drop your {format.toUpperCase()} model here or click to browse
+                  Name the {format.toUpperCase()} reference used while authoring the scaffold
                 </p>
                 <p className="text-[11px] text-[#647078] mb-3">
-                  Selected file: <strong className="text-[#167D73]">{fileName}</strong>
+                  Reference label: <strong className="text-[#167D73]">{fileName}</strong> (not uploaded or parsed)
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -196,27 +196,27 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
           {currentStep === 3 && (
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-[#242A30]">
-                Step 3: Geometry & Mesh Inspection
+                Step 3: Scaffold Inputs
               </h3>
               <p className="text-xs text-[#647078]">
-                Inspected bounding volumes, vertex buffers, and primitive meshes for file <strong>{fileName}</strong>:
+                The generator uses declared bounds and floor count. It has not inspected geometry in <strong>{fileName}</strong>.
               </p>
               <div className="grid grid-cols-2 gap-3 bg-white p-4 rounded-lg border border-[#E5E7EB] text-xs">
                 <div>
-                  <span className="text-[#647078] block">Total Meshes:</span>
-                  <span className="font-semibold text-[#242A30]">42 Structural Primitives</span>
+                  <span className="text-[#647078] block">Geometry extraction:</span>
+                  <span className="font-semibold text-amber-700">Not implemented</span>
                 </div>
                 <div>
-                  <span className="text-[#647078] block">Bounding Volume:</span>
+                  <span className="text-[#647078] block">Declared scaffold bounds:</span>
                   <span className="font-semibold text-[#242A30]">80.0 m × 45.0 m × 9.6 m</span>
                 </div>
                 <div>
-                  <span className="text-[#647078] block">Vertex Count:</span>
-                  <span className="font-semibold text-[#242A30]">18,450 Vertices</span>
+                  <span className="text-[#647078] block">Rooms / doors:</span>
+                  <span className="font-semibold text-[#242A30]">Generated placeholders</span>
                 </div>
                 <div>
-                  <span className="text-[#647078] block">Material Shaders:</span>
-                  <span className="font-semibold text-[#242A30]">Architectural Standard</span>
+                  <span className="text-[#647078] block">Stairs / ramps:</span>
+                  <span className="font-semibold text-[#242A30]">Generated placeholders</span>
                 </div>
               </div>
             </div>
@@ -284,10 +284,10 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
           {currentStep === 6 && (
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-[#242A30]">
-                Step 6: Automated Floor Level Clustering
+                Step 6: Scaffold Floor Count
               </h3>
               <p className="text-xs text-[#647078]">
-                Clusters horizontal planar surfaces along the height axis to extract discrete floor slabs.
+                Choose the number of evenly spaced placeholder levels. No floor slabs are extracted from geometry.
               </p>
               <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] space-y-2 text-xs">
                 <div className="flex justify-between items-center py-1 border-b border-[#E5E7EB]">
@@ -304,7 +304,7 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#647078]">Floors detected:</span>
+                <span className="text-xs text-[#647078]">Floors to generate:</span>
                 <input
                   type="number"
                   min={1}
@@ -320,23 +320,23 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
           {currentStep === 7 && (
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-[#242A30]">
-                Step 7: Room & Corridor Boundary Segmentation
+                Step 7: Generated Room Layout
               </h3>
               <p className="text-xs text-[#647078]">
-                Detects bounded architectural volumes and separates usable occupancy rooms from circulation corridors.
+                Creates a regular placeholder room layout and central circulation graph for later manual verification.
               </p>
               <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] text-xs space-y-1.5">
                 <div className="flex items-center gap-2 text-[#167D73] font-medium">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>24 Enclosed Room Boundaries Extracted</span>
+                  <span>Placeholder room boundaries will be generated</span>
                 </div>
                 <div className="flex items-center gap-2 text-[#167D73] font-medium">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>12 Main & Connecting Circulation Corridors Segmented</span>
+                  <span>Corridor waypoints will be generated from declared bounds</span>
                 </div>
                 <div className="flex items-center gap-2 text-[#167D73] font-medium">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Total Building Nominal Capacity: 1,104 Occupants</span>
+                  <span>Capacities are estimates and require author review</span>
                 </div>
               </div>
             </div>
@@ -345,19 +345,19 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
           {currentStep === 8 && (
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-[#242A30]">
-                Step 8: Doorway & Portal Detection
+                Step 8: Generated Doorways & Exits
               </h3>
               <p className="text-xs text-[#647078]">
-                Analyzes wall openings to place doorway nodes with standard ADA clearance (≥ 0.9m).
+                Adds placeholder doorways and two ground-level exits; no wall openings are detected from the reference file.
               </p>
               <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] text-xs space-y-1.5">
                 <div className="flex justify-between py-1 border-b border-[#E5E7EB]">
                   <span className="text-[#242A30]">Interior Room Doors:</span>
-                  <span className="font-semibold text-[#242A30]">24 Door Openings (1.2m width)</span>
+                  <span className="font-semibold text-[#242A30]">Generated 1.2m placeholder doors</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-[#242A30]">Exterior Emergency Portals:</span>
-                  <span className="font-semibold text-[#167D73]">2 Ground Egress Portals (3.2m & 2.4m)</span>
+                  <span className="font-semibold text-[#167D73]">2 generated ground exits</span>
                 </div>
               </div>
             </div>
@@ -369,7 +369,7 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
                 Step 9: Vertical Circulation & Accessibility Tagging
               </h3>
               <p className="text-xs text-[#647078]">
-                Tags vertical connectors to ensure wheelchair evacuees only use accessible ramps/elevators.
+                Adds one ambulatory stair and one accessible ramp between generated levels. Verify both against the real building before use.
               </p>
               <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] text-xs space-y-2">
                 <div className="flex items-center justify-between p-2 rounded bg-[#F9FAFB]">
@@ -399,7 +399,7 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
               <div className="flex items-center gap-2 text-[#167D73]">
                 <CheckCircle2 className="w-5 h-5" />
                 <h3 className="text-sm font-bold text-[#242A30]">
-                  Step 10: Validation & Simulation Readiness Confirmed!
+                  Step 10: Navigation Scaffold Generated
                 </h3>
               </div>
               <div className="p-4 bg-white rounded-lg border border-[#167D73]/30 shadow-xs space-y-3 text-xs">
@@ -416,8 +416,8 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
                   <span className="font-semibold text-[#242A30]">{importedResult?.room_count || 24} Rooms</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[#647078]">Graph Validation:</span>
-                  <span className="font-semibold text-[#167D73]">100% Traversable • Zero Dead Ends</span>
+                  <span className="text-[#647078]">Source fidelity:</span>
+                  <span className="font-semibold text-amber-700">Placeholder geometry — manual verification required</span>
                 </div>
               </div>
             </div>
@@ -460,7 +460,7 @@ export const BuildingImportWizard: React.FC<BuildingImportWizardProps> = ({
                 className="flex items-center gap-1.5 px-5 py-1.5 text-xs font-semibold text-white bg-[#167D73] hover:bg-[#126860] rounded-md shadow-xs transition-colors"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                {isProcessing ? 'Compiling Digital Twin...' : 'Generate 3D Digital Twin'}
+                {isProcessing ? 'Generating Scaffold...' : 'Generate Navigation Scaffold'}
               </button>
             )}
 

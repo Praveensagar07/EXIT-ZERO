@@ -442,8 +442,14 @@ export interface RoomGuidance {
   alternativeExitName: string;
   routeDistanceMeters: number;
   estimatedEgressTimeSec: number;
-  status: 'clear' | 'congested' | 'hazard_blocked';
+  routeNodeIds: string[];
+  alternativeRouteDistanceMeters?: number | null;
+  status: 'clear' | 'congested' | 'hazard_exposed' | 'unreachable';
   isWheelchairAccessible: boolean;
+  accessibleExitId: string;
+  accessibleExitName: string;
+  accessibleRouteDistanceMeters?: number | null;
+  accessibilityStatus: 'route_available' | 'room_not_accessible' | 'unreachable';
   maxCapacity: number;
 }
 

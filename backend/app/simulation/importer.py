@@ -16,20 +16,20 @@ from app.models.building import (
 
 def import_gltf_or_cad_mesh(data: Dict[str, Any]) -> Building:
     """
-    Parses GLTF/GLB structural meshes, scene nodes, or bounding boxes.
-    Automatically clusters vertical elevation spans into discrete floor levels,
-    identifies room volumes, corridor circulation, doors, and candidate exits.
+    Builds a navigation scaffold from caller-supplied bounds.
+
+    This endpoint does not decode GLTF/GLB/CAD geometry. The generated rooms,
+    doors, exits, stairs, and ramps are explicit simulation placeholders and
+    must never be represented as elements extracted from an uploaded model.
+    Structured EXIT-ZERO JSON with explicit floors is normalized separately.
     """
     building_name = data.get("name") or data.get("title") or "Imported 3D CAD/GLTF Model"
     building_id = f"bldg_{data.get('id', uuid.uuid4().hex[:8])}"
 
-    # Extract mesh boxes or bounding vertices
-    meshes = data.get("meshes", [])
-    nodes = data.get("nodes", [])
     raw_floors = data.get("floors", [])
 
     if raw_floors:
-        # If floors already structured in payload
+        # Explicit structured geometry is preserved rather than scaffolded.
         return import_scenario_json(data)
 
     # 1. Height Analysis & Floor Slicing
@@ -49,7 +49,7 @@ def import_gltf_or_cad_mesh(data: Dict[str, Any]) -> Building:
         floor_id = f"floor_{floor_level}"
         elevation = round(f_idx * floor_height, 2)
 
-        # Generate floor partitions: 6 to 8 rooms per floor
+        # Generate clearly labelled placeholder partitions for graph authoring.
         rooms: List[Room] = []
         doorways: List[Doorway] = []
 
@@ -76,7 +76,7 @@ def import_gltf_or_cad_mesh(data: Dict[str, Any]) -> Building:
                     Room(
                         id=rid,
                         floor_id=floor_id,
-                        name=f"Level {floor_level} Unit {room_idx}",
+                        name=f"Generated Room {floor_level}-{room_idx}",
                         bounds=BoundingBox(x=rx, y=ry, width=r_w, height=r_h),
                         room_type=r_type,
                         max_capacity=max(4, int((r_w * r_h) / 4.0)),
@@ -103,7 +103,7 @@ def import_gltf_or_cad_mesh(data: Dict[str, Any]) -> Building:
                 Exit(
                     id="exit_north_imported",
                     floor_id=floor_id,
-                    name="North Portal Exit",
+                    name="Generated North Exit",
                     x=round(total_width / 2.0, 2),
                     y=2.0,
                     width=3.2,
@@ -116,7 +116,7 @@ def import_gltf_or_cad_mesh(data: Dict[str, Any]) -> Building:
                 Exit(
                     id="exit_south_imported",
                     floor_id=floor_id,
-                    name="South Wing Exit",
+                    name="Generated South Exit",
                     x=round(total_width / 2.0, 2),
                     y=round(total_depth - 2.0, 2),
                     width=2.4,
@@ -181,8 +181,13 @@ def import_gltf_or_cad_mesh(data: Dict[str, Any]) -> Building:
     return Building(
         id=building_id,
         name=building_name,
-        description=f"Imported 3D digital twin geometry ({num_floors} floors, {total_width:.1f}m × {total_depth:.1f}m)",
-        author="EXIT-ZERO 3D Importer",
+        description=(
+            f"Navigation scaffold generated from supplied bounds "
+            f"({num_floors} floors, {total_width:.1f}m × {total_depth:.1f}m). "
+            "Rooms, doors, exits, stairs, and ramps are generated placeholders; "
+            "no geometry was extracted from a GLTF/GLB/CAD file."
+        ),
+        author="EXIT-ZERO Bounds Scaffold Generator",
         version="1.0",
         floors=floors,
     )

@@ -654,6 +654,26 @@ export function App() {
                     showRoutes={showRoutes}
                     showCongestionHeatmap={true}
                     simTime={simTime}
+                    selectedOccupantId={selectedElement?.type === 'occupant' ? selectedElement.id : null}
+                    onSelectOccupant={(occupantId) => {
+                      if (!occupantId) {
+                        setSelectedElement(null);
+                        return;
+                      }
+                      const target = occupants.find((occupant) => occupant.id === occupantId);
+                      if (target) {
+                        setActiveFloorId(target.floor_id);
+                        setSelectedElement({
+                          type: 'occupant',
+                          id: occupantId,
+                          floorId: target.floor_id,
+                          data: target,
+                        });
+                      }
+                    }}
+                    onToggleExit={handleToggleExit}
+                    selectedElementId={selectedElement?.id}
+                    onSelectElement={setSelectedElement}
                   />
                 )}
               </div>

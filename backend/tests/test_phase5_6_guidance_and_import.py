@@ -1,5 +1,5 @@
-"""Phase 5.6 Tests: Building-Independent 3D Digital Twin, Mesh/GLTF Importer,
-Vertical Grounding, and Multi-Tier Evacuation Guidance Platform.
+"""Phase 5.6 Tests: bounds scaffold, structured JSON import,
+vertical grounding, and multi-tier evacuation guidance.
 """
 
 import pytest
@@ -17,7 +17,7 @@ client = TestClient(app)
 
 
 def test_import_gltf_mesh_to_building():
-    """Verify GLTF/CAD mesh bounding box ingestion produces a valid multi-floor Building model."""
+    """Verify bounds input produces a clearly labelled navigation scaffold."""
     mock_payload = {
         "name": "Research Wing B",
         "floors_count": 3,
@@ -38,6 +38,9 @@ def test_import_gltf_mesh_to_building():
     building = import_gltf_or_cad_mesh(mock_payload)
     assert building.name == "Research Wing B"
     assert len(building.floors) == 3
+    assert "generated placeholders" in building.description
+    assert "no geometry was extracted" in building.description
+    assert building.author == "EXIT-ZERO Bounds Scaffold Generator"
 
     # Check elevations
     assert building.floors[0].elevation == 0.0
@@ -127,6 +130,31 @@ def test_guidance_generation_and_report_export():
     assert len(guidance["occupantsGuidance"]) > 0
     assert len(guidance["emergencyActionChecklist"]) >= 2
 
+    # Every room recommendation must be a real route through the live graph,
+    # never a straight line through walls or between floors.
+    for room in guidance["rooms"]:
+        if room["status"] == "unreachable":
+            assert room["primaryExitId"] == "none"
+            continue
+        assert room["routeNodeIds"][0] == f"node_room_{room['roomId']}"
+        assert room["routeNodeIds"][-1] == f"node_exit_{room['primaryExitId']}"
+        assert all(
+            engine.nx_graph.has_edge(u_id, v_id)
+            for u_id, v_id in zip(room["routeNodeIds"], room["routeNodeIds"][1:])
+        )
+
+        if room["accessibilityStatus"] == "route_available":
+            assert room["accessibleExitId"] != "none"
+            assert next(e for e in engine.exits if e.id == room["accessibleExitId"]).is_wheelchair_accessible
+
+    # A newly blocked exit is removed from every room recommendation.
+    blocked_id = next(room["primaryExitId"] for room in guidance["rooms"] if room["primaryExitId"] != "none")
+    next(exit_elem for exit_elem in engine.exits if exit_elem.id == blocked_id).is_blocked = True
+    engine._invalidate_graph_cache()
+    rerouted_guidance = generate_building_guidance(engine)
+    assert all(room["primaryExitId"] != blocked_id for room in rerouted_guidance["rooms"])
+    assert all(room["accessibleExitId"] != blocked_id for room in rerouted_guidance["rooms"])
+
     # Verify markdown generation
     md_report = format_guidance_markdown(guidance)
     assert "# EXIT-ZERO Evacuation Guidance & Emergency Brief" in md_report
@@ -164,8 +192,8 @@ def test_vertical_stair_traversal_elevation_continuity():
 
 
 def test_api_building_import_and_guidance_endpoints():
-    """Verify backend API endpoints for GLTF import and Guidance generation."""
-    # 1. Test POST /api/buildings/import-gltf
+    """Verify legacy scaffold and guidance endpoints."""
+    # 1. The legacy route name creates a bounds-based scaffold, not a GLTF parse.
     res = client.post(
         "/api/buildings/import-gltf",
         json={

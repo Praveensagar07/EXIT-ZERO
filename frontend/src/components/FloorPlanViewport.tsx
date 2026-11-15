@@ -12,6 +12,7 @@ import {
   Maximize2,
   Compass,
   Activity,
+  Radio,
 } from 'lucide-react';
 
 interface FloorPlanViewportProps {
@@ -185,6 +186,13 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
     );
   }
 
+  const trackedOccupant = selectedOccupantId
+    ? occupants.find((occupant) => occupant.id === selectedOccupantId)
+    : undefined;
+  const trackedExit = trackedOccupant?.target_exit_id
+    ? exits.find((exit) => exit.id === trackedOccupant.target_exit_id)
+    : undefined;
+
   return (
     <div
       ref={containerRef}
@@ -237,6 +245,33 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
           <Maximize2 className="w-4 h-4" />
         </button>
       </div>
+
+      {trackedOccupant && trackedOccupant.evacuation_state !== 'exited' && (
+        <div className="absolute top-4 left-4 z-20 w-72 overflow-hidden rounded-xl border border-cyan-300/40 bg-slate-950/95 text-slate-100 shadow-[0_0_28px_rgba(34,211,238,0.16)] backdrop-blur-md">
+          <div className="flex items-center justify-between border-b border-cyan-300/20 px-3 py-2">
+            <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">
+              <Radio className="h-3.5 w-3.5 animate-pulse" /> Sentinel Link
+            </span>
+            <span className="text-[10px] text-emerald-300">LIVE · T+{simTime.toFixed(1)}s</span>
+          </div>
+          <div className="grid grid-cols-[auto_1fr] gap-3 p-3">
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/80 text-[10px] font-black text-white shadow-[0_0_18px_currentColor]"
+              style={{
+                backgroundColor: `hsl(${Array.from(trackedOccupant.id).reduce((hash, char) => hash + char.charCodeAt(0) * 17, 0) % 360} 78% 48%)`,
+              }}
+            >
+              {trackedOccupant.id.replace(/[^0-9]/g, '').slice(-3)}
+            </div>
+            <div className="min-w-0 text-[11px]">
+              <div className="font-bold text-cyan-50">{trackedOccupant.id} · {trackedOccupant.mobility_category.replace('_', ' ')}</div>
+              <div className="mt-1 text-slate-400">Current location: {trackedOccupant.x.toFixed(1)}m, {trackedOccupant.y.toFixed(1)}m · {floor.name}</div>
+              <div className="mt-1 font-semibold text-emerald-300">Recommended exit: {trackedExit?.name || trackedOccupant.target_exit_id || 'Evaluating'}</div>
+              <div className="mt-1 text-cyan-200">Safest live route: {Math.max(0, trackedOccupant.current_path.length - trackedOccupant.path_index)} waypoints · reroutes {trackedOccupant.reroute_count}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SVG Canvas */}
       <svg className="w-full h-full pointer-events-auto">
@@ -656,9 +691,11 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
               const isWaiting = occ.evacuation_state === 'waiting';
               const isTrapped = occ.evacuation_state === 'trapped';
 
-              let occColor = '#3b82f6';
-              if (occ.mobility_category === 'wheelchair') occColor = '#f59e0b';
-              if (occ.mobility_category === 'reduced_speed') occColor = '#a855f7';
+              const markerHue = Array.from(occ.id).reduce(
+                (hash, char) => hash + char.charCodeAt(0) * 17,
+                0,
+              ) % 360;
+              let occColor = `hsl(${markerHue} 78% 52%)`;
               if (isTrapped) occColor = '#ef4444';
 
               return (
@@ -720,6 +757,20 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
                     strokeWidth={0.12}
                     style={{ transition: 'cx 0.35s ease-out, cy 0.35s ease-out' }}
                   />
+
+                  {isSelected && (
+                    <text
+                      x={occ.x}
+                      y={occ.y + 0.18}
+                      fill="#ffffff"
+                      fontSize={0.38}
+                      fontWeight="bold"
+                      textAnchor="middle"
+                      className="pointer-events-none"
+                    >
+                      {occ.id.replace(/[^0-9]/g, '').slice(-2)}
+                    </text>
+                  )}
 
                   {/* Wheelchair Accessible Inner Indicator */}
                   {occ.mobility_category === 'wheelchair' && (

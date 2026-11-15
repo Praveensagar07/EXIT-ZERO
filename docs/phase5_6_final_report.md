@@ -1,4 +1,6 @@
 # EXIT-ZERO — PHASE 5.6 FINAL ACCEPTANCE REPORT
+
+> **Correction for the INNOVEX 2026 final submission:** The GLTF/GLB/CAD claims below are historical and superseded. The current endpoint does not decode mesh geometry or extract rooms, doors, exits, stairs, or ramps. It creates a bounds-based navigation scaffold with generated placeholders. Structured EXIT-ZERO JSON is the supported authored building interchange. Do not present the generated scaffold as geometry extracted from an uploaded building.
 ## Building-Independent 3D Evacuation Digital Twin & Guidance Platform
 
 **Project:** EXIT-ZERO — Adaptive Emergency Evacuation Digital Twin  
@@ -11,14 +13,14 @@
 
 ## 1. Executive Summary
 
-Phase 5.6 successfully eliminates the critical visual and spatial defects observed in prior builds, establishes building independence via an automated CAD/BIM import pipeline, and delivers a production-grade multi-tier Evacuation Guidance Platform.
+Phase 5.6 addressed visual and spatial defects and added a multi-tier Evacuation Guidance Platform. Its bounds-based scaffold generator supports rapid simulation authoring, but it is not a CAD/BIM/GLTF geometry extraction pipeline.
 
 ### Key Objectives & Outcomes
 
 | Objective | Target | Result | Evidence |
 | :--- | :--- | :--- | :--- |
 | **P0 Defect: Grounding & Traversal** | Zero floating, suspended, or vertically dropping occupants | **RESOLVED** | Soles calibrated to $y=0.00\text{m}$; 60 FPS lerp; continuous stair flight geometry |
-| **Building Independence** | Ingestion of arbitrary 3D CAD/GLTF/BIM models | **OPERATIONAL** | 10-step wizard + backend vertical slicer & graph compiler |
+| **Building Scaffolding** | Generate an editable navigation scaffold from declared bounds | **OPERATIONAL WITH LIMITS** | Wizard + bounds scaffold generator; no CAD/GLTF/BIM geometry decoding |
 | **Multi-Floor Vertical Stairs/Ramps** | Continuous rise without exploded-floor gaps | **OPERATIONAL** | Global stair flight generator bridging full $(Y_{\text{to}} - Y_{\text{from}})$ |
 | **Evacuation Guidance Platform** | Facility, Floor, Room, Occupant directives + Checklist | **OPERATIONAL** | Full 4-tier dashboard + real-time turn-by-turn waypoints + markdown export |
 | **Light Engineering Design System** | Strict compliance with `#FAFAF8`, `#FFFFFF`, `#167D73` | **COMPLIANT** | Refined architectural theme matching INNOVEX specifications |
@@ -66,47 +68,44 @@ During initial diagnosis of the user-provided defect screenshots:
 
 ---
 
-## 3. Building-Independent 3D Digital Twin Architecture
+## 3. Building Input and Scaffold Architecture
 
-EXIT-ZERO is no longer restricted to static pre-configured scenarios. The platform now includes an end-to-end BIM/CAD import pipeline:
+EXIT-ZERO supports explicit building geometry through structured EXIT-ZERO JSON. For GLTF/GLB/CAD references, the current legacy-named endpoint creates a regular placeholder scaffold from caller-supplied bounds:
 
 ```
-[3D Mesh / CAD / GLTF / GLB / JSON]
+[Declared bounds / floor count OR structured EXIT-ZERO JSON]
                   │
                   ▼
-   10-Step Building Import Wizard (UI)
+   Building Reference & Navigation Scaffold Wizard
                   │
                   ▼
    POST /api/buildings/import-gltf
                   │
                   ▼
-   Automated Elevation Slicing & Clustering (importer.py)
-   ├── Vertical Level Detection (H / 3.2m)
-   ├── Room & Corridor Spatial Partitioning
-   ├── Doorway & Portal Extraction
-   └── Vertical Circulation (Stairs & Accessible Ramps)
+   Bounds Scaffold Generator (importer.py)
+   ├── Even placeholder levels (H / 3.2m)
+   ├── Generated regular room partitions
+   ├── Generated doors and ground exits
+   └── Generated stairs and accessible ramps
                   │
                   ▼
    BuildingGraphGenerator (graph_generator.py)
    ├── 3D Waypoint Grid Generation
    ├── Multi-Floor Traversability Graph
-   └── Accessibility Audit (Wheelchair Slope <= 1:12)
+   └── Accessibility audit from authored/generated flags
                   │
                   ▼
-   Instant Digital Twin Simulation & Building Studio Editing
+   Simulation scaffold for Building Studio review and editing
 ```
 
-### 10-Step Import Wizard Workflow
-1. **Format Selection:** Ingest `.gltf`, `.glb`, or EXIT-ZERO `.json`.
-2. **Upload & Inspection:** Mesh polygon count, node tree hierarchy, and vertex bounds.
-3. **Geometry Inspection:** Visual bounding box confirmation.
-4. **Scale & Units:** Automatic conversion (meters, centimeters, millimeters).
-5. **Coordinate Alignment:** Y-up vs. Z-up orientation correction.
-6. **Floor Slicing:** Elevation clustering into discrete walking slabs.
-7. **Room & Corridor Segmentation:** Boundary volume recognition and capacity estimation.
-8. **Door & Portal Detection:** Identification of exit openings and room portals.
-9. **Accessibility Tagging:** Designation of wheelchair accessible routes and elevators.
-10. **Compilation & Validation:** Topology audit and immediate launch into Building Studio or Simulation.
+### Wizard Workflow and Limits
+1. **Format reference:** Record a GLTF/GLB reference label, or use structured EXIT-ZERO JSON for authored elements.
+2. **Declared dimensions:** Supply bounds, units, orientation notes, and desired floor count.
+3. **Scaffold generation:** Create placeholder levels, rooms, doors, exits, stairs, and ramps.
+4. **Graph compilation:** Build traversable edges and accessibility constraints from the scaffold.
+5. **Manual review:** Verify and edit every generated element against authoritative building data before simulation use.
+
+The wizard does not upload or inspect a mesh, count vertices, detect slabs, segment rooms, find portals, or extract stairs. Any generated architectural element is a placeholder, not source-derived geometry.
 
 ---
 

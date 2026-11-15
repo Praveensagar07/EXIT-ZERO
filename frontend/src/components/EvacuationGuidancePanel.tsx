@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Compass,
   ShieldAlert,
@@ -32,7 +32,10 @@ export const EvacuationGuidancePanel: React.FC<EvacuationGuidancePanelProps> = (
   const [activeFloorFilter, setActiveFloorFilter] = useState<string>('all');
   const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
 
-  const fetchGuidance = async () => {
+  const occupantHue = (occupantId: string) =>
+    Array.from(occupantId).reduce((hash, char) => hash + char.charCodeAt(0) * 17, 0) % 360;
+
+  const fetchGuidance = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await api.getGuidance({
@@ -46,13 +49,13 @@ export const EvacuationGuidancePanel: React.FC<EvacuationGuidancePanelProps> = (
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [algorithm, scenarioId, sessionId]);
 
   useEffect(() => {
     fetchGuidance();
     const interval = setInterval(fetchGuidance, 5000);
     return () => clearInterval(interval);
-  }, [scenarioId, sessionId, algorithm]);
+  }, [fetchGuidance]);
 
   const toggleCheck = (idx: number) => {
     setCheckedItems((prev) => ({ ...prev, [idx]: !prev[idx] }));
@@ -220,7 +223,7 @@ export const EvacuationGuidancePanel: React.FC<EvacuationGuidancePanelProps> = (
                   Room Egress Assignments & Route Clearance
                 </h3>
                 <p className="text-xs text-[#647078]">
-                  Designated primary exit, backup route, and estimated transit durations per room
+                  Live graph routes respect walls, closed paths, blocked exits, stairs, ramps, and active hazards
                 </p>
               </div>
 
@@ -280,7 +283,17 @@ export const EvacuationGuidancePanel: React.FC<EvacuationGuidancePanelProps> = (
                         </div>
                       </td>
                       <td className="py-3 px-4 text-[#647078]">{room.floorName}</td>
-                      <td className="py-3 px-4 text-[#167D73] font-medium">{room.primaryExitName}</td>
+                      <td className="py-3 px-4 text-[#167D73] font-medium">
+                        <div>{room.primaryExitName}</div>
+                        {room.isWheelchairAccessible && (
+                          <div className="mt-1 text-[10px] text-sky-700 font-normal">
+                            Accessible: {room.accessibleExitName}
+                            {room.accessibleRouteDistanceMeters != null
+                              ? ` · ${room.accessibleRouteDistanceMeters.toFixed(1)} m`
+                              : ''}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-4 text-[#647078]">{room.alternativeExitName}</td>
                       <td className="py-3 px-4 text-[#242A30] font-mono">{room.routeDistanceMeters.toFixed(1)} m</td>
                       <td className="py-3 px-4 text-[#242A30] font-mono">{room.estimatedEgressTimeSec.toFixed(1)} s</td>
@@ -310,37 +323,45 @@ export const EvacuationGuidancePanel: React.FC<EvacuationGuidancePanelProps> = (
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-xs">
             <h3 className="text-sm font-semibold text-[#242A30] flex items-center gap-2 mb-3">
               <Compass className="w-4 h-4 text-[#167D73]" />
-              Real-Time Occupant Navigation & Dynamic Reroutes
+              Sentinel Link · Live Occupant Route Tracking
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-              {guidance.occupantsGuidance.slice(0, 8).map((occ) => (
-                <div
+              {guidance.occupantsGuidance.slice(0, 8).map((occ, index) => (
+                <button
+                  type="button"
                   key={occ.occupantId}
                   onClick={() => onSelectOccupant && onSelectOccupant(occ.occupantId)}
-                  className="p-3.5 rounded-lg border border-[#E5E7EB] bg-[#FAFAF8] hover:border-[#167D73] cursor-pointer transition-all space-y-2"
+                  className="p-3.5 rounded-xl border border-cyan-400/30 bg-slate-950 text-left text-slate-100 hover:border-cyan-300 focus-visible:outline-2 focus-visible:outline-cyan-300 transition-all space-y-2 shadow-[inset_0_0_24px_rgba(34,211,238,0.06)]"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#242A30]">{occ.occupantId}</span>
-                      <span className="text-[10px] bg-[#E2E8F0] text-[#475569] px-2 py-0.5 rounded uppercase font-medium">
+                      <span
+                        className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/70 text-[10px] font-black text-white shadow-[0_0_12px_currentColor]"
+                        style={{ backgroundColor: `hsl(${occupantHue(occ.occupantId)} 78% 48%)` }}
+                        title={`Distinct marker for ${occ.occupantId}`}
+                      >
+                        {index + 1}
+                      </span>
+                      <span className="font-bold text-cyan-100">{occ.occupantId}</span>
+                      <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded uppercase font-medium">
                         {occ.mobilityCategory}
                       </span>
                     </div>
-                    <span className="text-[11px] font-mono text-[#167D73] font-semibold">
+                    <span className="text-[11px] font-mono text-cyan-300 font-semibold">
                       {occ.distanceRemainingMeters}m rem • ~{occ.estimatedArrivalSec}s
                     </span>
                   </div>
 
-                  <div className="text-[11px] text-[#647078] flex items-center gap-1.5">
-                    <ArrowRight className="w-3.5 h-3.5 text-[#167D73]" />
-                    <span>Heading to <strong>{occ.targetExitName}</strong></span>
+                  <div className="text-[11px] text-slate-300 flex items-center gap-1.5">
+                    <ArrowRight className="w-3.5 h-3.5 text-cyan-300" />
+                    <span>Recommended exit: <strong className="text-emerald-300">{occ.targetExitName}</strong></span>
                   </div>
 
                   {occ.turnByTurnInstructions && occ.turnByTurnInstructions.length > 0 && (
-                    <div className="bg-white p-2 rounded border border-[#E5E7EB] text-[11px] space-y-1">
+                    <div className="bg-slate-900/80 p-2 rounded border border-cyan-400/20 text-[11px] space-y-1">
                       {occ.turnByTurnInstructions.slice(0, 3).map((instr, i) => (
-                        <div key={i} className="flex items-center gap-1.5 text-[#242A30]">
-                          <span className="text-[#167D73] font-mono">{i + 1}.</span>
+                        <div key={i} className="flex items-center gap-1.5 text-slate-200">
+                          <span className="text-cyan-300 font-mono">{i + 1}.</span>
                           <span>{instr}</span>
                         </div>
                       ))}
@@ -352,7 +373,7 @@ export const EvacuationGuidancePanel: React.FC<EvacuationGuidancePanelProps> = (
                       {occ.rerouteExplanation}
                     </div>
                   )}
-                </div>
+                </button>
               ))}
             </div>
           </div>

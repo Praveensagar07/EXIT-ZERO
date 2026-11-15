@@ -2,9 +2,68 @@ import math
 from typing import Dict, List, Optional
 from datetime import datetime
 
+import networkx as nx
+
 from app.models.building import Building, Floor, RoomType
 from app.models.occupant import Occupant, EvacuationState, MobilityCategory
 from app.simulation.engine import SimulationEngine
+
+
+def _rank_room_routes(
+    engine: SimulationEngine,
+    room_id: str,
+    mobility: MobilityCategory,
+    graph: nx.Graph,
+) -> List[Dict]:
+    """Rank open, reachable exits using the live safety-constrained graph."""
+    start_node = f"node_room_{room_id}"
+    if start_node not in graph:
+        return []
+
+    try:
+        paths = nx.single_source_dijkstra_path(graph, start_node, weight="weight")
+        costs = nx.single_source_dijkstra_path_length(graph, start_node, weight="weight")
+    except (nx.NetworkXError, nx.NodeNotFound):
+        return []
+
+    ranked = []
+    for exit_elem in engine.exits:
+        if exit_elem.is_blocked:
+            continue
+        if mobility == MobilityCategory.WHEELCHAIR and not exit_elem.is_wheelchair_accessible:
+            continue
+
+        exit_node = f"node_exit_{exit_elem.id}"
+        path = paths.get(exit_node)
+        if not path:
+            continue
+
+        distance = 0.0
+        max_hazard = 0.0
+        max_density = 0.0
+        for u_id, v_id in zip(path, path[1:]):
+            edge = engine._edge_data.get((u_id, v_id), {})
+            edge_obj = edge.get("edge_obj")
+            distance += float(edge.get("length", 0.0))
+            max_hazard = max(
+                max_hazard,
+                float(edge.get("hazard_level", 0.0)),
+                float(getattr(edge_obj, "hazard_level", 0.0)),
+                float(edge.get("fire_level", 0.0)),
+                float(edge.get("smoke_level", 0.0)),
+            )
+            max_density = max(max_density, float(edge.get("current_density", 0.0)))
+
+        ranked.append({
+            "exit": exit_elem,
+            "path": path,
+            "distance": round(distance, 1),
+            "cost": float(costs.get(exit_node, distance)),
+            "max_hazard": max_hazard,
+            "max_density": max_density,
+        })
+
+    return sorted(ranked, key=lambda candidate: candidate["cost"])
 
 
 def generate_building_guidance(engine: SimulationEngine) -> Dict:
@@ -26,6 +85,10 @@ def generate_building_guidance(engine: SimulationEngine) -> Dict:
 
     # 1. Exit Map & Status
     exit_map = {e.id: e for e in exits}
+    route_graphs = {
+        MobilityCategory.STANDARD: engine._build_traversable_graph(MobilityCategory.STANDARD),
+        MobilityCategory.WHEELCHAIR: engine._build_traversable_graph(MobilityCategory.WHEELCHAIR),
+    }
 
     # 2. Floor-Level Guidance & Room-Level Analysis
     floors_guidance = []
@@ -53,29 +116,40 @@ def generate_building_guidance(engine: SimulationEngine) -> Dict:
         # Room guidance for this floor
         rooms_guidance = []
         for room in floor.rooms:
-            rx = room.bounds.x + room.bounds.width / 2.0
-            ry = room.bounds.y + room.bounds.height / 2.0
-
-            # Rank candidate exits by Euclidean 3D proximity
-            sorted_exits = sorted(
-                exits,
-                key=lambda e: math.hypot(e.x - rx, e.y - ry, getattr(e, "z", 0.0) - getattr(floor, "elevation", 0.0))
+            standard_routes = _rank_room_routes(
+                engine,
+                room.id,
+                MobilityCategory.STANDARD,
+                route_graphs[MobilityCategory.STANDARD],
             )
+            accessible_routes = (
+                _rank_room_routes(
+                    engine,
+                    room.id,
+                    MobilityCategory.WHEELCHAIR,
+                    route_graphs[MobilityCategory.WHEELCHAIR],
+                )
+                if getattr(room, "is_accessible", True)
+                else []
+            )
+            primary_route = standard_routes[0] if standard_routes else None
+            alt_route = standard_routes[1] if len(standard_routes) > 1 else None
+            accessible_route = accessible_routes[0] if accessible_routes else None
+            primary_exit = primary_route["exit"] if primary_route else None
+            alt_exit = alt_route["exit"] if alt_route else None
+            accessible_exit = accessible_route["exit"] if accessible_route else None
 
-            primary_exit = next((e for e in sorted_exits if not e.is_blocked), sorted_exits[0] if sorted_exits else None)
-            alt_exit = next((e for e in sorted_exits if e != primary_exit and not e.is_blocked), None)
+            dist_m = primary_route["distance"] if primary_route else 0.0
+            est_time_s = round(dist_m / 1.2, 1) if primary_route else 0.0
 
-            dist_m = 0.0
-            if primary_exit:
-                dist_m = round(math.hypot(primary_exit.x - rx, primary_exit.y - ry, getattr(primary_exit, "z", 0.0) - getattr(floor, "elevation", 0.0)) * 1.3, 1)
-
-            est_time_s = max(5.0, round(dist_m / 1.2, 1))
-
-            status = "clear"
-            if primary_exit and primary_exit.is_blocked:
-                status = "hazard_blocked"
-            elif primary_exit and (primary_exit.current_queue or 0) > 8:
-                status = "congested"
+            status = "unreachable"
+            if primary_route:
+                if primary_route["max_hazard"] >= 0.35:
+                    status = "hazard_exposed"
+                elif primary_route["max_density"] >= 1.8 or (primary_exit.current_queue or 0) > 8:
+                    status = "congested"
+                else:
+                    status = "clear"
 
             rg = {
                 "roomId": room.id,
@@ -88,8 +162,18 @@ def generate_building_guidance(engine: SimulationEngine) -> Dict:
                 "alternativeExitName": alt_exit.name if alt_exit else "None Available",
                 "routeDistanceMeters": dist_m,
                 "estimatedEgressTimeSec": est_time_s,
+                "routeNodeIds": primary_route["path"] if primary_route else [],
+                "alternativeRouteDistanceMeters": alt_route["distance"] if alt_route else None,
                 "status": status,
                 "isWheelchairAccessible": getattr(room, "is_accessible", True),
+                "accessibleExitId": accessible_exit.id if accessible_exit else "none",
+                "accessibleExitName": accessible_exit.name if accessible_exit else "No accessible route",
+                "accessibleRouteDistanceMeters": accessible_route["distance"] if accessible_route else None,
+                "accessibilityStatus": (
+                    "route_available" if accessible_route else
+                    "room_not_accessible" if not getattr(room, "is_accessible", True) else
+                    "unreachable"
+                ),
                 "maxCapacity": room.max_capacity,
             }
             rooms_guidance.append(rg)

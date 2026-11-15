@@ -13,9 +13,17 @@ EXIT-ZERO compares conventional safety-aware shortest-path evacuation with predi
 - Baseline shortest-path routing that reacts when a physical exit becomes unavailable.
 - EXIT-ZERO multi-objective routing with congestion inflow lookahead, hazard costs, accessibility constraints, replanning cadence, and hysteresis.
 - Interactive floor plan with live occupants, routes, hazards, queues, density, exit blocking, and telemetry.
+- Room guidance computed from the live navigation graph, so recommended and backup exits follow real graph edges around walls and closed paths, exclude blocked exits, traverse configured stairs/ramps, and expose a separate wheelchair-accessible route where available.
+- Original **Sentinel Link** occupant tracker with a distinctive marker per simulated occupant, current coordinates, recommended exit, and the active route that changes with simulation reroutes.
 - Paired multi-seed experiment jobs with bootstrap intervals, sign-flip tests, evidence-strength labels, and CSV/JSON export.
 - Separate Python-heap and process-RSS memory measurements.
 - Wheelchair completion and evacuation-time telemetry for accessibility claims.
+
+## Building input scope
+
+- Structured EXIT-ZERO JSON is the supported fidelity-preserving building interchange. It can define floors, rooms, doors, exits, stairs, ramps, and accessibility flags.
+- The legacy `/api/buildings/import-gltf` route and its wizard do **not** decode GLTF, GLB, BIM, or CAD geometry. They create an explicitly labelled navigation scaffold from declared bounds and floor count.
+- Rooms, doors, exits, stairs, and ramps made by that scaffold generator are placeholders for simulation authoring. They are not geometry extracted from an uploaded building and must be manually checked before use.
 
 ## Evidence snapshot
 
@@ -123,7 +131,17 @@ Each scaling result is now saved as CSV and JSON instead of existing only in ter
 
 ## Judge demo
 
-Use the in-app **Interactive Demo** and follow [docs/demo_script.md](docs/demo_script.md). The flow loads configurations but never substitutes stored numbers for a live run. Finish in the Evidence Lab with the 20-seed result and limitations.
+Three-minute final demonstration:
+
+1. **0:00–0:25 — Scope.** Open the multi-floor scenario and state that EXIT-ZERO is a research simulator, not a certified life-safety system.
+2. **0:25–0:55 — Track one occupant.** Switch to the 2D view, click a distinctive occupant marker, and show Sentinel Link, the highlighted graph route, current location, mobility class, and recommended exit.
+3. **0:55–1:25 — Change the hazard state.** Block that recommended exit in the floor plan. Show that the old exit is excluded, the route and recommended exit update, and the reroute counter/event changes.
+4. **1:25–1:50 — Accessibility.** Select a wheelchair occupant and show that the simulated route uses wheelchair-accessible edges and an accessible exit rather than an ambulatory-only stair.
+5. **1:50–2:10 — Room guidance.** Open **Guidance** and show primary, backup, graph distance, status, and the separately reported accessible route.
+6. **2:10–2:30 — Input honesty.** Open the building reference wizard and point out that GLTF/GLB/CAD is reference metadata only; the current tool generates a bounds-based placeholder scaffold. Structured EXIT-ZERO JSON is the supported authored interchange.
+7. **2:30–3:00 — Evidence and limits.** Open Evidence Lab, identify the saved 20-seed Scenario B result, then disclose the mixed-mobility regression and simplified hazard/crowd models.
+
+The flow uses live simulation state for routing and labels saved experiment artifacts as saved evidence. A longer script is in [docs/demo_script.md](docs/demo_script.md).
 
 ## Deployment
 
