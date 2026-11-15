@@ -22,6 +22,7 @@ from app.models.building import (
     Exit,
     Floor,
     HazardSource,
+    HazardType,
     Room,
     RoomType,
     SpawnZone,
@@ -402,6 +403,39 @@ def toggle_exit_blockage(session_id: str, exit_id: str):
     if not success:
         raise HTTPException(status_code=404, detail=f"Exit '{exit_id}' not found in simulation.")
 
+    return engine.get_state()
+
+
+
+class AddHazardRequest(BaseModel):
+    floor_id: str = "floor_1"
+    x: float = 40.0
+    y: float = 20.0
+    hazard_type: str = "fire"
+    intensity: float = 1.0
+    growth_rate: float = 0.35
+    max_radius: float = 20.0
+
+
+@router.post("/simulation/{session_id}/hazard", response_model=SimulationState)
+def add_simulation_hazard(session_id: str, req: AddHazardRequest):
+    if session_id not in active_sessions:
+        raise HTTPException(status_code=404, detail=f"Simulation session '{session_id}' not found.")
+    engine = active_sessions[session_id]
+    new_h = HazardSource(
+        id=f"haz_{len(engine.hazards) + 1}",
+        floor_id=req.floor_id,
+        x=req.x,
+        y=req.y,
+        hazard_type=HazardType.FIRE if req.hazard_type.lower() == "fire" else HazardType.SMOKE,
+        start_time_sec=engine.current_time_sec,
+        growth_rate=req.growth_rate,
+        max_radius=req.max_radius,
+        intensity=req.intensity,
+    )
+    engine.hazards.append(new_h)
+    engine._update_hazards_and_corridors(dt=0.5)
+    engine._route_all_occupants()
     return engine.get_state()
 
 

@@ -173,6 +173,7 @@ class BuildingGraphGenerator:
                 )
 
         # 5. Connect Exits to nearest corridor nodes
+        all_corridor_nodes = [node for node, _ in corridor_nodes]
         for exit_elem in floor.exits:
             exit_node_id = exit_map[exit_elem.id]
             # Find closest corridor or doorway node
@@ -180,8 +181,13 @@ class BuildingGraphGenerator:
                 n_id for n_id, n_data in nodes.items()
                 if n_id != exit_node_id and n_data.node_type in [NodeType.CORRIDOR_JUNCTION, NodeType.CORRIDOR_WAYPOINT, NodeType.DOORWAY]
             ]
+            if not candidates:
+                candidates = [
+                    n_id for n_id in nodes.keys()
+                    if n_id != exit_node_id
+                ]
             if candidates:
-                # Pick up to 2 closest candidates within 15 meters
+                # Pick up to 2 closest candidates
                 candidates.sort(
                     key=lambda nid: math.hypot(nodes[nid].x - exit_elem.x, nodes[nid].y - exit_elem.y)
                 )
@@ -189,7 +195,7 @@ class BuildingGraphGenerator:
                     target_node = nodes[target_id]
                     dist = math.hypot(exit_elem.x - target_node.x, exit_elem.y - target_node.y)
                     effective_dist = max(0.5, round(dist, 2))
-                    if dist <= 20.0 and not G.has_edge(exit_node_id, target_id):
+                    if not G.has_edge(exit_node_id, target_id):
                         is_acc = exit_elem.is_wheelchair_accessible and target_node.is_accessible
                         edge = GraphEdge(
                             u=exit_node_id,
@@ -214,6 +220,42 @@ class BuildingGraphGenerator:
                             current_occupants=0,
                             weight=edge.base_weight,
                         )
+
+        # 6. Ensure rooms without explicit doorways connect to nearest corridor node
+        for room in floor.rooms:
+            room_node_id = f"node_room_{room.id}"
+            if room_node_id in G and G.degree(room_node_id) == 0:
+                if all_corridor_nodes:
+                    r_node = nodes[room_node_id]
+                    closest_c = min(
+                        all_corridor_nodes,
+                        key=lambda cn: math.hypot(cn.x - r_node.x, cn.y - r_node.y),
+                    )
+                    dist = math.hypot(closest_c.x - r_node.x, closest_c.y - r_node.y)
+                    effective_dist = max(0.5, round(dist, 2))
+                    edge = GraphEdge(
+                        u=room_node_id,
+                        v=closest_c.id,
+                        length=effective_dist,
+                        width=1.2,
+                        capacity_per_sec=1.5,
+                        wheelchair_accessible=r_node.is_accessible,
+                        hazard_level=0.0,
+                        current_occupants=0,
+                        base_weight=effective_dist,
+                    )
+                    edges.append(edge)
+                    G.add_edge(
+                        room_node_id,
+                        closest_c.id,
+                        length=edge.length,
+                        width=edge.width,
+                        capacity_per_sec=edge.capacity_per_sec,
+                        wheelchair_accessible=edge.wheelchair_accessible,
+                        hazard_level=0.0,
+                        current_occupants=0,
+                        weight=edge.base_weight,
+                    )
 
         nav_model = NavigationGraphModel(nodes=nodes, edges=edges)
         return G, nav_model
@@ -368,6 +410,11 @@ class BuildingGraphGenerator:
                     if nd.floor_id == from_fid and nd.id != landing_from_id
                     and nd.node_type in [NodeType.CORRIDOR_JUNCTION, NodeType.CORRIDOR_WAYPOINT, NodeType.DOORWAY]
                 ]
+                if not candidates_from:
+                    candidates_from = [
+                        nid for nid, nd in all_nodes.items()
+                        if nd.floor_id == from_fid and nd.id != landing_from_id
+                    ]
                 if candidates_from:
                     closest_from = min(
                         candidates_from,
@@ -405,6 +452,11 @@ class BuildingGraphGenerator:
                     if nd.floor_id == to_fid and nd.id != landing_to_id
                     and nd.node_type in [NodeType.CORRIDOR_JUNCTION, NodeType.CORRIDOR_WAYPOINT, NodeType.DOORWAY]
                 ]
+                if not candidates_to:
+                    candidates_to = [
+                        nid for nid, nd in all_nodes.items()
+                        if nd.floor_id == to_fid and nd.id != landing_to_id
+                    ]
                 if candidates_to:
                     closest_to = min(
                         candidates_to,

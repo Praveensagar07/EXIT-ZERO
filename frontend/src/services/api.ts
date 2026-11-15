@@ -134,6 +134,19 @@ export const api = {
     return res.json();
   },
 
+  async triggerHazard(
+    sessionId: string,
+    hazard: { floor_id?: string; x?: number; y?: number; hazard_type?: string; intensity?: number; growth_rate?: number; max_radius?: number }
+  ): Promise<SimulationState> {
+    const res = await fetch(`${API_BASE}/simulation/${sessionId}/hazard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(hazard),
+    });
+    if (!res.ok) throw new Error(`Trigger hazard failed: ${res.statusText}`);
+    return res.json();
+  },
+
   async triggerBatchExperiment(req: ExperimentRunRequest): Promise<{ job_id: string; status: string }> {
     const res = await fetch(`${API_BASE}/experiments/run`, {
       method: 'POST',

@@ -31,6 +31,8 @@ interface FloorPlanViewportProps {
   selectedOccupantId?: string | null;
   onSelectOccupant?: (id: string | null) => void;
   onToggleExit?: (exitId: string) => void;
+  selectedElementId?: string | null;
+  onSelectElement?: (element: { type: any; id: string; floorId: string; data: any }) => void;
 }
 
 export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
@@ -50,6 +52,8 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   selectedOccupantId,
   onSelectOccupant,
   onToggleExit,
+  selectedElementId,
+  onSelectElement,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -307,15 +311,27 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
 
               return (
                 <g key={room.id}>
+                  {/* Room Highlight & Selection */}
                   <rect
                     x={room.bounds.x}
                     y={room.bounds.y}
                     width={room.bounds.width}
                     height={room.bounds.height}
-                    fill={fillColor}
-                    stroke={strokeColor}
-                    strokeWidth={0.25}
+                    fill={selectedElementId === room.id ? "rgba(22, 125, 115, 0.2)" : fillColor}
+                    stroke={selectedElementId === room.id ? "#167D73" : strokeColor}
+                    strokeWidth={selectedElementId === room.id ? 0.6 : 0.25}
                     className="transition-colors hover:fill-slate-800/80 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onSelectElement && floor) {
+                        onSelectElement({
+                          type: room.room_type === "corridor" ? "corridor" : "room",
+                          id: room.id,
+                          floorId: floor.id,
+                          data: room,
+                        });
+                      }
+                    }}
                     onMouseEnter={(e) =>
                       setHoveredEntity({
                         type: 'room',
@@ -358,6 +374,53 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
                 />
               </g>
             ))}
+
+          {/* STAIRWELLS & ACCESSIBLE RAMPS */}
+          {floor.stairwells &&
+            floor.stairwells.map((stair) => {
+              const isSelected = selectedElementId === stair.id;
+              const isRamp = Boolean(stair.is_ramp);
+              return (
+                <g
+                  key={stair.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onSelectElement && floor) {
+                      onSelectElement({
+                        type: isRamp ? "ramp" : "stair",
+                        id: stair.id,
+                        floorId: floor.id,
+                        data: stair,
+                      });
+                    }
+                  }}
+                  className="cursor-pointer group"
+                >
+                  <rect
+                    x={stair.x - stair.width / 2}
+                    y={stair.y - 1.5}
+                    width={stair.width}
+                    height={3.0}
+                    rx={0.3}
+                    fill={isRamp ? "#e0f2fe" : "#f1f5f9"}
+                    stroke={isSelected ? "#167D73" : isRamp ? "#0284c7" : "#64748b"}
+                    strokeWidth={isSelected ? 0.6 : 0.25}
+                  />
+                  <text
+                    x={stair.x}
+                    y={stair.y}
+                    fill={isRamp ? "#0369a1" : "#475569"}
+                    fontSize={0.9}
+                    fontWeight="600"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="pointer-events-none select-none font-mono"
+                  >
+                    {isRamp ? "RAMP" : "STAIR"}
+                  </text>
+                </g>
+              );
+            })}
 
           {/* 3. STRUCTURAL OBSTACLES */}
           {floor.obstacles.map((obs) => (
