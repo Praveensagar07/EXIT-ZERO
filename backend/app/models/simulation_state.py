@@ -30,6 +30,8 @@ class RouteCostBreakdown(BaseModel):
     hazard_penalty_sec: float
     congestion_penalty_sec: float
     reroute_penalty_sec: float
+    fire_exposure_cost: float = 0.0
+    smoke_exposure_cost: float = 0.0
     total_cost: float
 
 

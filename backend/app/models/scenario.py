@@ -31,12 +31,16 @@ class AlgorithmWeights(BaseModel):
     w_congestion: float = 2.0          # Corridor crowd congestion penalty weight
     w_queue: float = 2.5               # Exit bottleneck queue delay weight
     w_hazard: float = 8.0              # Smoke/fire hazard exposure penalty weight
+    w_fire: float = 50.0               # Direct thermal fire exposure penalty weight
+    w_smoke: float = 25.0              # Smoke exposure penalty weight
     w_reroute: float = 5.0             # Route switching penalty (hysteresis)
     w_accessibility: float = 1000.0    # Hard constraint barrier weight for inaccessible paths
     w_accessibility_reservation: float = 0.0 # Optional penalty (off by default to avoid stair funneling); configurable > 0
     hysteresis_threshold: float = 0.20  # Alternative route must be >= 20% superior to switch
     replan_interval_sec: float = 4.0   # Replanning cadence interval in seconds
     prediction_horizon_sec: float = 20.0 # Predictive inflow lookahead horizon in seconds
+    fire_impassable_threshold: float = 0.60 # Hard limit for passable thermal fire intensity
+    smoke_impassable_threshold: float = 0.80 # Hard limit for passable smoke density
 
 
 class ScenarioConfig(BaseModel):

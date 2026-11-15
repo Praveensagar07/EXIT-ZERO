@@ -110,6 +110,10 @@ class HazardSource(BaseModel):
     growth_rate: float = 0.15  # radius growth per second
     max_radius: float = 15.0   # meters
     intensity: float = 1.0     # 0.0 to 1.0 peak severity
+    current_radius: float = 0.0
+    smoke_radius: float = 0.0
+    affected_room_id: Optional[str] = None
+    is_active: bool = False
 
 
 class SpawnZone(BaseModel):

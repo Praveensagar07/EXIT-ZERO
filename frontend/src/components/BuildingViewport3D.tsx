@@ -1072,6 +1072,10 @@ export const BuildingViewport3D: React.FC<BuildingViewport3DProps> = ({
     const floors = building.floors || [];
 
     hazards.forEach((h) => {
+      // Only render active hazard geometry if it has begun
+      const isActive = h.is_active !== undefined ? h.is_active : true;
+      if (!isActive && (h.current_radius ?? 0) <= 0.01) return;
+
       let hz = 0.0;
       const floorIdx = floors.findIndex((f) => f.id === h.floor_id);
       if (floorIdx >= 0) {
@@ -1080,8 +1084,11 @@ export const BuildingViewport3D: React.FC<BuildingViewport3DProps> = ({
         if (viewMode === 'exploded') hz += floorIdx * explodeSpacing;
       }
 
-      // A. Ground Ember Ring
-      const ringGeo = new THREE.RingGeometry(0.8, 1.4, 16);
+      const curFireRadius = Math.max(0.8, h.current_radius ?? 2.0);
+      const curSmokeRadius = Math.max(curFireRadius * 1.3, h.smoke_radius ?? (curFireRadius * 1.7));
+
+      // A. Ground Ember Ring (Thermal core)
+      const ringGeo = new THREE.RingGeometry(curFireRadius * 0.4, curFireRadius * 0.85, 16);
       const ringMat = new THREE.MeshBasicMaterial({
         color: 0x7c2d12,
         side: THREE.DoubleSide,
@@ -1093,7 +1100,7 @@ export const BuildingViewport3D: React.FC<BuildingViewport3DProps> = ({
 
       // B. Animated Flame Cones
       for (let i = 0; i < 3; i++) {
-        const flameGeo = new THREE.ConeGeometry(0.6 + i * 0.2, 1.8 + i * 0.3, 8);
+        const flameGeo = new THREE.ConeGeometry(0.5 + i * 0.15, 1.6 + i * 0.3, 8);
         const flameMat = new THREE.MeshStandardMaterial({
           color: i === 0 ? 0xf97316 : 0xef4444,
           emissive: 0xd97706,
@@ -1103,48 +1110,79 @@ export const BuildingViewport3D: React.FC<BuildingViewport3DProps> = ({
         });
         const flameMesh = new THREE.Mesh(flameGeo, flameMat);
         flameMesh.position.set(
-          h.x + (i - 1) * 0.4,
-          hz + 0.9,
-          h.y + (i % 2 === 0 ? 0.3 : -0.3)
+          h.x + (i - 1) * 0.35,
+          hz + 0.8,
+          h.y + (i % 2 === 0 ? 0.25 : -0.25)
         );
         hazardGroup.add(flameMesh);
         flameMeshesRef.current.push(flameMesh);
       }
 
-      // C. Perimeter Hazard Warning Ring
-      const currentRadius = Math.max(
-        2.0,
-        (h as any).current_radius ?? h.max_radius ?? 4.0
-      );
-      const boundaryGeo = new THREE.RingGeometry(currentRadius - 0.15, currentRadius, 32);
+      // C. Perimeter Hazard Thermal Warning Ring
+      const boundaryGeo = new THREE.RingGeometry(curFireRadius - 0.15, curFireRadius, 32);
       const boundaryMat = new THREE.MeshBasicMaterial({
         color: 0xef4444,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.6,
       });
       const boundaryMesh = new THREE.Mesh(boundaryGeo, boundaryMat);
       boundaryMesh.rotation.x = -Math.PI / 2;
       boundaryMesh.position.set(h.x, hz + 0.06, h.y);
       hazardGroup.add(boundaryMesh);
 
-      // D. Semi-Transparent Volumetric Smoke Puff
-      const smokeGeo = new THREE.SphereGeometry(currentRadius * 0.7, 12, 10);
+      // D. Volumetric Stratified Smoke Layer (Matches Backend Smoke Radius)
+      const smokeGeo = new THREE.SphereGeometry(curSmokeRadius * 0.75, 14, 10);
       smokeGeo.scale(1.2, 0.45, 1.2);
       const smokeMat = new THREE.MeshStandardMaterial({
-        color: 0x475569,
+        color: 0x334155,
         transparent: true,
-        opacity: 0.28,
-        roughness: 0.9,
+        opacity: 0.32,
+        roughness: 0.95,
       });
       const smokeMesh = new THREE.Mesh(smokeGeo, smokeMat);
-      smokeMesh.position.set(h.x, hz + 2.4, h.y);
+      smokeMesh.position.set(h.x, hz + 2.2, h.y);
       hazardGroup.add(smokeMesh);
     });
 
+    // E. Visibly mark impassable / dangerous corridor edges in 3D
+    if (graph && graph.edges) {
+      graph.edges.forEach((edge) => {
+        const isDanger = edge.is_impassable || edge.hazard_level >= 0.60;
+        if (!isDanger) return;
+        const uNode = graph.nodes[edge.u];
+        const vNode = graph.nodes[edge.v];
+        if (!uNode || !vNode) return;
+
+        let uz = uNode.z ?? 0.0;
+        let vz = vNode.z ?? 0.0;
+        if (viewMode === 'exploded') {
+          uz = getExplodedElevation(uz, floors, explodeSpacing);
+          vz = getExplodedElevation(vz, floors, explodeSpacing);
+        }
+
+        const midX = (uNode.x + vNode.x) / 2;
+        const midY = (uz + vz) / 2 + 0.08;
+        const midZ = (uNode.y + vNode.y) / 2;
+        const edgeDist = Math.hypot(vNode.x - uNode.x, vNode.y - uNode.y);
+        const angle = Math.atan2(vNode.y - uNode.y, vNode.x - uNode.x);
+
+        const barrierGeo = new THREE.BoxGeometry(edgeDist, 0.12, 0.25);
+        const barrierMat = new THREE.MeshBasicMaterial({
+          color: 0xef4444,
+          transparent: true,
+          opacity: 0.85,
+        });
+        const barrierMesh = new THREE.Mesh(barrierGeo, barrierMat);
+        barrierMesh.position.set(midX, midY, midZ);
+        barrierMesh.rotation.y = -angle;
+        hazardGroup.add(barrierMesh);
+      });
+    }
+
     scene.add(hazardGroup);
     hazardGroupRef.current = hazardGroup;
-  }, [hazards, showHazards, viewMode, building]);
+  }, [hazards, showHazards, viewMode, building, graph, getExplodedElevation]);
 
   // 6. Camera Orbit, Pan & Element Raycasting Controls
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {

@@ -146,6 +146,10 @@ export interface HazardSource {
   growth_rate: number;
   max_radius: number;
   intensity: number;
+  current_radius?: number;
+  smoke_radius?: number;
+  affected_room_id?: string;
+  is_active?: boolean;
 }
 
 export interface SpawnZone {
@@ -179,6 +183,8 @@ export interface GraphEdge {
   capacity_per_sec: number;
   wheelchair_accessible: boolean;
   hazard_level: number;
+  smoke_level?: number;
+  is_impassable?: boolean;
   current_occupants: number;
   current_density?: number;
   base_weight: number;

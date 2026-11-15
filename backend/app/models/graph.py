@@ -33,6 +33,8 @@ class GraphEdge(BaseModel):
     capacity_per_sec: float = 2.4  # Max egress throughput (persons/sec)
     wheelchair_accessible: bool = True
     hazard_level: float = 0.0      # Current edge danger index [0.0, 1.0]
+    smoke_level: float = 0.0       # Current smoke concentration index [0.0, 1.0]
+    is_impassable: bool = False    # True if edge is physically or thermally impassable
     current_occupants: int = 0     # Number of occupants currently on or queuing for edge
     current_density: float = 0.0   # Current crowd density in persons/m^2
     base_weight: float             # Initial traversal cost (defaulting to length)

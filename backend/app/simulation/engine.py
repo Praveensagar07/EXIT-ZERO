@@ -96,6 +96,9 @@ class SimulationEngine:
                 "wheelchair_accessible": edge.wheelchair_accessible,
                 "is_blocked": False,
                 "is_impassable": False,
+                "hazard_level": 0.0,
+                "fire_level": 0.0,
+                "smoke_level": 0.0,
                 "edge_obj": edge,
             }
             self._edge_data[edge_key_1] = info
@@ -103,6 +106,7 @@ class SimulationEngine:
 
         # 2. Exits, Hazards and Scenario Events
         self.hazards: List[HazardSource] = [h.model_copy() for h in self.scenario.hazard_sources]
+        self.burning_rooms: Set[str] = set()
         self.events: List[ScenarioEvent] = [ev.model_copy() for ev in self.scenario.events]
         self.executed_event_ids: List[str] = []
 
@@ -230,24 +234,52 @@ class SimulationEngine:
 
         return best_nid if best_nid else list(self.nav_model.nodes.keys())[0]
 
-    def _build_traversable_graph(self, mobility: MobilityCategory) -> nx.Graph:
+    def _build_traversable_graph(
+        self, mobility: MobilityCategory, active_occ: Optional[Occupant] = None
+    ) -> nx.Graph:
         """
         Extracts a NetworkX graph view of strictly traversable edges,
         filtering out inaccessible edges (for wheelchairs), physically blocked corridors,
-        and corridors engulfed in fire/smoke (hazard_level >= 0.85).
+        and corridors engulfed in fire/smoke (impassable).
+        Dynamically applies multi-objective edge traversal costs J(e).
         """
         blocked_exit_nodes = {f"node_exit_{e.id}" for e in self.exits if e.is_blocked}
         valid_edges = []
+
+        # Check if active occupant is currently inside a burning room and needs to escape
+        occ_burning_room = None
+        if active_occ and self.burning_rooms:
+            occ_floor = next(
+                (f for f in self.scenario.building.floors if f.id == active_occ.floor_id), None
+            )
+            if occ_floor:
+                for r_id in self.burning_rooms:
+                    r = next((rm for rm in occ_floor.rooms if rm.id == r_id), None)
+                    if r and (
+                        r.bounds.x <= active_occ.x <= r.bounds.x + r.bounds.width
+                        and r.bounds.y <= active_occ.y <= r.bounds.y + r.bounds.height
+                    ):
+                        occ_burning_room = r_id
+                        break
+
         for u, v, d in self.nx_graph.edges(data=True):
             if u in blocked_exit_nodes or v in blocked_exit_nodes:
                 continue
             info = self._edge_data.get((u, v), {})
-            # Check physical blockage or fire impassability
-            if info.get("is_blocked", False) or info.get("is_impassable", False):
-                continue
             edge_obj = info.get("edge_obj")
-            if edge_obj and edge_obj.hazard_level >= 0.85:
-                continue
+
+            # Check physical blockage or fire impassability
+            is_impassable = info.get("is_impassable", False) or (
+                edge_obj and getattr(edge_obj, "is_impassable", False)
+            )
+            is_blocked = info.get("is_blocked", False)
+
+            if is_blocked or is_impassable:
+                # Exception: occupant already inside burning room may use doorway to escape
+                if occ_burning_room and (occ_burning_room in u or occ_burning_room in v):
+                    pass
+                else:
+                    continue
 
             # Check wheelchair accessibility constraints
             if mobility == MobilityCategory.WHEELCHAIR:
@@ -260,6 +292,33 @@ class SimulationEngine:
                 if node_v and not node_v.is_accessible:
                     continue
 
+            # Compute dynamic edge cost J(e)
+            length = info.get("length", 1.0)
+            rho = info.get("current_density", 0.0) if edge_obj is None else getattr(edge_obj, "current_density", 0.0)
+            f_lvl = info.get("fire_level", 0.0)
+            s_lvl = info.get("smoke_level", 0.0)
+
+            v_ref = 1.30 if mobility != MobilityCategory.WHEELCHAIR else 0.80
+            t_travel = length / max(0.10, v_ref)
+            t_congestion = length * max(0.0, rho - 1.0)
+
+            w_fire = getattr(self.weights, "w_fire", 50.0)
+            w_smoke = getattr(self.weights, "w_smoke", 25.0)
+
+            if self.algorithm == AlgorithmType.BASELINE:
+                # Baseline uses safety-constrained shortest path with fire/smoke deterrence
+                edge_cost = length + (length * f_lvl * w_fire * 0.4) + (length * s_lvl * w_smoke * 0.4)
+            else:
+                # Adaptive uses full multi-objective edge cost J(e)
+                edge_cost = (
+                    self.weights.w_distance * t_travel
+                    + self.weights.w_congestion * t_congestion
+                    + (length * f_lvl * w_fire)
+                    + (length * s_lvl * w_smoke)
+                )
+
+            d["weight"] = round(edge_cost, 3)
+            d["dynamic_cost"] = round(edge_cost, 3)
             valid_edges.append((u, v))
 
         return self.nx_graph.edge_subgraph(valid_edges).copy()
@@ -268,9 +327,15 @@ class SimulationEngine:
         """Invalidates graph views when topology changes."""
         self._cached_graphs.clear()
 
-    def _get_cached_graph(self, mobility: MobilityCategory) -> nx.Graph:
+    def _get_cached_graph(
+        self, mobility: MobilityCategory, active_occ: Optional[Occupant] = None
+    ) -> nx.Graph:
         """Retrieves or builds cached traversable subgraph for mobility class."""
         cache_key = MobilityCategory.WHEELCHAIR if mobility == MobilityCategory.WHEELCHAIR else MobilityCategory.STANDARD
+        if active_occ and self.burning_rooms:
+            for r_id in self.burning_rooms:
+                if r_id in active_occ.current_node_id:
+                    return self._build_traversable_graph(cache_key, active_occ=active_occ)
         if cache_key not in self._cached_graphs:
             self._cached_graphs[cache_key] = self._build_traversable_graph(cache_key)
         return self._cached_graphs[cache_key]
@@ -378,6 +443,8 @@ class SimulationEngine:
         # 1. Travel time
         travel_time = 0.0
         hazard_cost = 0.0
+        fire_cost = 0.0
+        smoke_cost = 0.0
         congestion_cost = 0.0
 
         for i in range(len(path) - 1):
@@ -395,8 +462,13 @@ class SimulationEngine:
 
             # Hazard penalty
             edge_obj = info.get("edge_obj")
-            h_level = edge_obj.hazard_level if edge_obj else 0.0
+            h_level = edge_obj.hazard_level if edge_obj else info.get("hazard_level", 0.0)
+            f_level = info.get("fire_level", 0.0)
+            s_level = info.get("smoke_level", 0.0)
+
             hazard_cost += length * h_level
+            fire_cost += length * f_level * getattr(self.weights, "w_fire", 50.0)
+            smoke_cost += length * s_level * getattr(self.weights, "w_smoke", 25.0)
 
             # Congestion penalty
             if rho > 1.0:
@@ -418,6 +490,8 @@ class SimulationEngine:
             self.weights.w_distance * travel_time
             + self.weights.w_queue * queue_delay
             + self.weights.w_hazard * hazard_cost
+            + fire_cost
+            + smoke_cost
             + self.weights.w_congestion * congestion_cost
             + reroute_penalty
         )
@@ -453,6 +527,8 @@ class SimulationEngine:
             hazard_penalty_sec=round(hazard_cost * self.weights.w_hazard, 2),
             congestion_penalty_sec=round(congestion_cost * self.weights.w_congestion, 2),
             reroute_penalty_sec=round(reroute_penalty, 2),
+            fire_exposure_cost=round(fire_cost, 2),
+            smoke_exposure_cost=round(smoke_cost, 2),
             total_cost=round(total_cost, 2),
         )
 
@@ -477,10 +553,12 @@ class SimulationEngine:
             edge_densities = self._calculate_edge_densities()
 
         # Build or retrieve cached traversable subgraph
-        G_view = self._get_cached_graph(occ.mobility_category)
+        G_view = self._get_cached_graph(occ.mobility_category, active_occ=occ)
         curr_node = occ.current_node_id
         if curr_node not in G_view:
             occ.evacuation_state = EvacuationState.TRAPPED
+            occ.current_path = []
+            occ.movement_speed = 0.0
             return False
 
         # Identify all candidate open exits
@@ -498,6 +576,7 @@ class SimulationEngine:
         if not valid_exits:
             occ.evacuation_state = EvacuationState.TRAPPED
             occ.current_path = []
+            occ.movement_speed = 0.0
             return False
 
         # Compute shortest paths from curr_node in a single Dijkstra search
@@ -524,6 +603,8 @@ class SimulationEngine:
 
             if best_path:
                 prev_target = occ.target_exit_id
+                if prev_target == (chosen_exit.id if chosen_exit else None) and not is_emergency and occ.current_path:
+                    return False
                 occ.previous_path = list(occ.current_path) if occ.current_path else []
                 occ.current_path = best_path
                 occ.path_index = 0
@@ -531,19 +612,24 @@ class SimulationEngine:
                 occ.evacuation_state = EvacuationState.EVACUATING
                 if prev_target and prev_target != occ.target_exit_id:
                     occ.reroute_count += 1
+                    prev_exit_elem = next((e for e in self.exits if e.id == prev_target), None)
+                    is_prev_blocked = prev_exit_elem.is_blocked if prev_exit_elem else False
+                    reason = "EMERGENCY_OVERRIDE" if is_prev_blocked else ("HAZARD_AVOIDANCE" if is_emergency else "CONGESTION_ADVANTAGE")
                     self.reroute_events.append(
                         RerouteEvent(
                             time_sec=self.current_time_sec,
                             occupant_id=occ.id,
                             previous_exit_id=prev_target,
                             new_exit_id=chosen_exit.id if chosen_exit else "",
-                            reason="EMERGENCY_OVERRIDE",
+                            reason=reason,
                             cost_improvement_percent=0.0,
                         )
                     )
                 return prev_target != occ.target_exit_id
             else:
                 occ.evacuation_state = EvacuationState.TRAPPED
+                occ.current_path = []
+                occ.movement_speed = 0.0
                 return False
 
         # Strategy B: EXIT-ZERO (Adaptive Multi-Objective Intelligence)
@@ -597,7 +683,9 @@ class SimulationEngine:
 
             if prev_exit and prev_exit != best_exit.id:
                 occ.reroute_count += 1
-                reason = "EMERGENCY_OVERRIDE" if is_emergency else "CONGESTION_ADVANTAGE"
+                prev_exit_elem = next((e for e in self.exits if e.id == prev_exit), None)
+                is_prev_blocked = prev_exit_elem.is_blocked if prev_exit_elem else False
+                reason = "EMERGENCY_OVERRIDE" if is_prev_blocked else ("HAZARD_AVOIDANCE" if is_emergency else "CONGESTION_ADVANTAGE")
                 self.reroute_events.append(
                     RerouteEvent(
                         time_sec=self.current_time_sec,
@@ -623,49 +711,162 @@ class SimulationEngine:
 
     def _update_hazards_and_corridors(self, dt: float) -> bool:
         """
-        Propagates fire/smoke hazards and marks engulfed corridors as impassable.
-        Accumulates occupant exposure dosage.
-        Returns True if any corridor newly became impassable (hazard_level >= 0.85).
+        Physics-based deterministic fire and smoke propagation:
+        - Thermal fire grows inside origin compartment, extending heat/flame through doorways.
+        - Smoke propagates along connected corridors at high velocity (~0.8 m/s).
+        - Multi-point edge sampling (5 equidistant points) captures peak and mean exposure.
+        - Compartment walls prevent fire/smoke teleportation through solid barriers.
+        - Marks severely exposed edges as impassable and accumulates occupant exposure dosage.
+        Returns True if any corridor newly became impassable or dangerous.
         """
         newly_impassable = False
+        self.burning_rooms.clear()
+
         for hazard in self.hazards:
-            if self.current_time_sec >= hazard.start_time_sec:
-                time_active = self.current_time_sec - hazard.start_time_sec
-                current_radius = min(hazard.max_radius, time_active * hazard.growth_rate)
+            is_active = self.current_time_sec >= hazard.start_time_sec
+            hazard.is_active = is_active
+            if not is_active:
+                hazard.current_radius = 0.0
+                hazard.smoke_radius = 0.0
+                continue
 
-                # 1. Update edge hazard severity & impassability
-                for edge in self.nav_model.edges:
-                    u_node = self.nav_model.nodes.get(edge.u)
-                    v_node = self.nav_model.nodes.get(edge.v)
-                    if not u_node or not v_node:
-                        continue
+            time_active = self.current_time_sec - hazard.start_time_sec
+            current_radius = min(hazard.max_radius, time_active * hazard.growth_rate)
+            # Smoke expands faster down corridors (standard ~0.6-0.8 m/s)
+            smoke_growth_rate = max(hazard.growth_rate * 3.5, 0.60)
+            smoke_radius = min(hazard.max_radius * 1.8, time_active * smoke_growth_rate)
+            hazard.current_radius = round(current_radius, 2)
+            hazard.smoke_radius = round(smoke_radius, 2)
 
-                    # Midpoint distance to hazard
-                    mx = (u_node.x + v_node.x) / 2.0
-                    my = (u_node.y + v_node.y) / 2.0
-                    dist = math.hypot(mx - hazard.x, my - hazard.y)
+            # Identify origin floor and compartment
+            h_floor = next((f for f in self.scenario.building.floors if f.id == hazard.floor_id), None)
+            origin_room = None
+            vent_doors = []
+            if h_floor:
+                for r in h_floor.rooms:
+                    if (r.bounds.x <= hazard.x <= r.bounds.x + r.bounds.width and
+                        r.bounds.y <= hazard.y <= r.bounds.y + r.bounds.height):
+                        origin_room = r
+                        self.burning_rooms.add(r.id)
+                        hazard.affected_room_id = r.id
+                        break
+                if origin_room:
+                    vent_doors = [d for d in h_floor.doorways if origin_room.id in d.connects_rooms and d.is_open]
 
-                    if dist <= current_radius:
-                        severity = hazard.intensity * (1.0 - (dist / max(1.0, current_radius)))
-                        edge.hazard_level = max(edge.hazard_level, round(severity, 3))
-                        if edge.hazard_level >= 0.85:
-                            info = self._edge_data.get((edge.u, edge.v))
-                            if info and not info.get("is_impassable", False):
-                                info["is_impassable"] = True
-                                newly_impassable = True
-                            info2 = self._edge_data.get((edge.v, edge.u))
-                            if info2 and not info2.get("is_impassable", False):
-                                info2["is_impassable"] = True
-                                newly_impassable = True
+            # 1. Update edge hazard severity & impassability along 5 sample points
+            for edge in self.nav_model.edges:
+                u_node = self.nav_model.nodes.get(edge.u)
+                v_node = self.nav_model.nodes.get(edge.v)
+                if not u_node or not v_node:
+                    continue
 
-                # 2. Accumulate exposure dosage on occupants within hazard zone
-                for occ in self.occupants:
-                    if occ.evacuation_state == EvacuationState.EXITED:
-                        continue
-                    dist_to_hazard = math.hypot(occ.x - hazard.x, occ.y - hazard.y)
-                    if dist_to_hazard <= current_radius:
-                        severity = hazard.intensity * (1.0 - (dist_to_hazard / max(1.0, current_radius)))
-                        occ.hazard_exposure = round(occ.hazard_exposure + severity * dt, 4)
+                # Multi-floor physical isolation: Fire & smoke only affect the matching floor
+                if u_node.floor_id != hazard.floor_id and v_node.floor_id != hazard.floor_id:
+                    continue
+
+                # Sample 5 points along the edge segment
+                sample_fire = []
+                sample_smoke = []
+                for s_idx in range(5):
+                    t_frac = s_idx / 4.0
+                    px = u_node.x + t_frac * (v_node.x - u_node.x)
+                    py = u_node.y + t_frac * (v_node.y - u_node.y)
+
+                    # Euclidean distance to hazard point
+                    d_origin = math.hypot(px - hazard.x, py - hazard.y)
+
+                    # Thermal Fire Model
+                    if origin_room:
+                        in_room = (origin_room.bounds.x <= px <= origin_room.bounds.x + origin_room.bounds.width and
+                                   origin_room.bounds.y <= py <= origin_room.bounds.y + origin_room.bounds.height)
+                        if in_room:
+                            f_sev = hazard.intensity * max(0.60, 1.0 - (d_origin / max(1.0, hazard.max_radius)))
+                        else:
+                            # Outside origin room: thermal radiation only extends through doorways
+                            d_door = min((math.hypot(px - d.x, py - d.y) for d in vent_doors), default=999.0)
+                            if d_door <= 2.5 and d_origin <= current_radius:
+                                f_sev = hazard.intensity * (1.0 - (d_door / 2.5)) * 0.70
+                            else:
+                                f_sev = 0.0
+                    else:
+                        # Open plan / corridor fire
+                        if d_origin <= current_radius:
+                            f_sev = hazard.intensity * (1.0 - (d_origin / max(1.0, current_radius)))
+                        else:
+                            f_sev = 0.0
+
+                    sample_fire.append(f_sev)
+
+                    # Smoke Model: Spreads through doorways along connected corridors
+                    if origin_room:
+                        in_room = (origin_room.bounds.x <= px <= origin_room.bounds.x + origin_room.bounds.width and
+                                   origin_room.bounds.y <= py <= origin_room.bounds.y + origin_room.bounds.height)
+                        if in_room:
+                            s_sev = hazard.intensity * 0.90
+                        else:
+                            # Corridor smoke propagation from doorways
+                            d_vent = min((math.hypot(px - d.x, py - d.y) for d in vent_doors), default=d_origin)
+                            if d_vent <= smoke_radius:
+                                s_sev = hazard.intensity * max(0.0, 1.0 - (d_vent / max(1.0, smoke_radius)))
+                            else:
+                                s_sev = 0.0
+                    else:
+                        if d_origin <= smoke_radius:
+                            s_sev = hazard.intensity * max(0.0, 1.0 - (d_origin / max(1.0, smoke_radius)))
+                        else:
+                            s_sev = 0.0
+
+                    sample_smoke.append(s_sev)
+
+                peak_fire = max(sample_fire)
+                mean_fire = sum(sample_fire) / 5.0
+                peak_smoke = max(sample_smoke)
+                mean_smoke = sum(sample_smoke) / 5.0
+
+                combined_hazard = max(peak_fire, peak_smoke)
+                edge.hazard_level = max(edge.hazard_level, round(combined_hazard, 3))
+                edge.smoke_level = max(getattr(edge, "smoke_level", 0.0), round(peak_smoke, 3))
+
+                info1 = self._edge_data.get((edge.u, edge.v))
+                info2 = self._edge_data.get((edge.v, edge.u))
+                for inf in [info1, info2]:
+                    if inf:
+                        inf["hazard_level"] = edge.hazard_level
+                        inf["fire_level"] = max(inf.get("fire_level", 0.0), round(peak_fire, 3))
+                        inf["smoke_level"] = max(inf.get("smoke_level", 0.0), round(peak_smoke, 3))
+
+                # Hard impassability thresholds:
+                fire_impassable = peak_fire >= getattr(self.weights, "fire_impassable_threshold", 0.60)
+                smoke_impassable = peak_smoke >= getattr(self.weights, "smoke_impassable_threshold", 0.80)
+
+                # Edges inside burning rooms are impassable to through-traffic
+                is_burning_room_edge = False
+                if origin_room:
+                    u_in = (origin_room.bounds.x <= u_node.x <= origin_room.bounds.x + origin_room.bounds.width and
+                            origin_room.bounds.y <= u_node.y <= origin_room.bounds.y + origin_room.bounds.height)
+                    v_in = (origin_room.bounds.x <= v_node.x <= origin_room.bounds.x + origin_room.bounds.width and
+                            origin_room.bounds.y <= v_node.y <= origin_room.bounds.y + origin_room.bounds.height)
+                    if u_in and v_in:
+                        is_burning_room_edge = True
+
+                if fire_impassable or smoke_impassable or is_burning_room_edge:
+                    edge.is_impassable = True
+                    for inf in [info1, info2]:
+                        if inf and not inf.get("is_impassable", False):
+                            inf["is_impassable"] = True
+                            newly_impassable = True
+
+            # 2. Accumulate exposure dosage on occupants on matching floor
+            for occ in self.occupants:
+                if occ.evacuation_state in [EvacuationState.EXITED, EvacuationState.TRAPPED]:
+                    continue
+                if occ.floor_id != hazard.floor_id:
+                    continue
+
+                d_occ = math.hypot(occ.x - hazard.x, occ.y - hazard.y)
+                if d_occ <= smoke_radius:
+                    exposure_rate = hazard.intensity * max(0.0, 1.0 - (d_occ / max(1.0, smoke_radius)))
+                    occ.hazard_exposure = round(occ.hazard_exposure + exposure_rate * dt, 4)
 
         if newly_impassable:
             self._invalidate_graph_cache()
@@ -729,29 +930,32 @@ class SimulationEngine:
         """
         Evaluates whether dynamic replanning should be triggered for occupants:
           - Periodic check every replan_interval_sec.
-          - Emergency override if an occupant's target exit or corridor is blocked.
+          - Emergency override if an occupant's target exit or corridor is blocked or dangerous.
         """
         is_periodic = (self.current_time_sec - self._last_global_replan_time) >= self.weights.replan_interval_sec
         if not (is_periodic or force_emergency):
-            return
+            # Check individual occupant emergency triggers even between global periodic intervals
+            pass
 
         if force_emergency:
             self._invalidate_graph_cache()
 
         densities = self._calculate_edge_densities()
-        self._last_global_replan_time = self.current_time_sec
-        self._precompute_arrival_times()
+        if is_periodic or force_emergency:
+            self._last_global_replan_time = self.current_time_sec
+            self._precompute_arrival_times()
 
         for occ in self.occupants:
-            if occ.evacuation_state in [EvacuationState.EXITED, EvacuationState.WAITING]:
+            if occ.evacuation_state in [EvacuationState.EXITED, EvacuationState.WAITING, EvacuationState.TRAPPED]:
                 continue
 
             # Check if current target exit became blocked
             current_target_exit = next((e for e in self.exits if e.id == occ.target_exit_id), None)
             target_blocked = current_target_exit.is_blocked if current_target_exit else False
 
-            # Check if any upcoming path node/edge is blocked or impassable
+            # Check if any upcoming path node/edge is blocked or impassable or newly dangerous
             path_blocked = False
+            path_hazardous = False
             if occ.current_path and occ.path_index < len(occ.current_path):
                 for i in range(occ.path_index, len(occ.current_path) - 1):
                     u_id = occ.current_path[i]
@@ -760,23 +964,27 @@ class SimulationEngine:
                     if info.get("is_blocked", False) or info.get("is_impassable", False):
                         path_blocked = True
                         break
+                    edge_hl = max(info.get("hazard_level", 0.0), info.get("smoke_level", 0.0))
+                    if edge_hl >= 0.20:
+                        path_hazardous = True
 
-            is_emergency = target_blocked or path_blocked or force_emergency
+            is_emergency = target_blocked or path_blocked or path_hazardous or force_emergency
 
-            # For Baseline: ONLY replan if emergency (target or path is physically blocked)
+            # For Baseline: ONLY replan if emergency (target or path is physically blocked or dangerous)
             if self.algorithm == AlgorithmType.BASELINE:
                 if is_emergency:
                     self._route_occupant(occ, edge_densities=densities, is_emergency=True)
             else:
-                # For EXIT-ZERO: Replan either on emergency or on periodic predictive evaluation
-                self._route_occupant(occ, edge_densities=densities, is_emergency=is_emergency)
+                # For EXIT-ZERO: Replan on emergency or periodic predictive evaluation
+                if is_emergency or is_periodic:
+                    self._route_occupant(occ, edge_densities=densities, is_emergency=is_emergency)
 
     def step(self, dt: float = 0.5) -> SimulationState:
         """
         Advances the discrete-event simulation by dt seconds with physically-constrained
         crowd dynamics, Weidmann congestion deceleration, and FIFO exit queue service.
         """
-        if self.status == SimulationStatus.COMPLETED:
+        if self.status in [SimulationStatus.COMPLETED, SimulationStatus.PAUSED]:
             return self.get_state()
 
         self.status = SimulationStatus.RUNNING
