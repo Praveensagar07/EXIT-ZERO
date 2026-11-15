@@ -440,6 +440,8 @@ def build_multifloor_demo_scenario() -> ScenarioConfig:
             Doorway(id="D-107", floor_id="floor_1", x=27.0, y=30.0, width=1.2, connects_rooms=["R-107"]),
             Doorway(id="D-108", floor_id="floor_1", x=42.0, y=30.0, width=1.5, connects_rooms=["R-108"]),
             Doorway(id="D-109", floor_id="floor_1", x=57.0, y=30.0, width=1.2, connects_rooms=["R-109"]),
+            Doorway(id="D-103-N", floor_id="floor_1", x=40.0, y=5.0, width=2.4, connects_rooms=["R-103"]),
+            Doorway(id="D-108-S", floor_id="floor_1", x=40.0, y=40.0, width=2.0, connects_rooms=["R-108"]),
         ],
         exits=[
             Exit(id="exit_north_main", floor_id="floor_1", name="Exit A: North Grand Portal", x=40.0, y=2.0, width=3.2, throughput_per_sec=3.2, is_wheelchair_accessible=True, is_blocked=False),

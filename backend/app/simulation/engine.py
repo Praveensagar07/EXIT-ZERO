@@ -208,10 +208,21 @@ class SimulationEngine:
     def _find_nearest_navigable_node(
         self, x: float, y: float, mobility: MobilityCategory, floor_id: Optional[str] = None
     ) -> str:
+        # 1. If occupant spawns inside a room, strictly assign room center node to prevent wall clipping
+        if floor_id:
+            floor_elem = next((f for f in self.scenario.building.floors if f.id == floor_id), None)
+            if floor_elem:
+                for r in floor_elem.rooms:
+                    b = r.bounds
+                    if b.x <= x <= b.x + b.width and b.y <= y <= b.y + b.height:
+                        r_nid = f"node_room_{r.id}"
+                        if r_nid in self.nav_model.nodes:
+                            return r_nid
+
         best_nid = ""
         best_dist = float("inf")
 
-        # 1. Search matching floor
+        # 2. Search matching floor
         for nid, node in self.nav_model.nodes.items():
             if floor_id and node.floor_id != floor_id:
                 continue
@@ -222,7 +233,7 @@ class SimulationEngine:
                 best_dist = dist
                 best_nid = nid
 
-        # 2. Fallback to any floor if empty
+        # 3. Fallback to any floor if empty
         if not best_nid:
             for nid, node in self.nav_model.nodes.items():
                 if mobility == MobilityCategory.WHEELCHAIR and not node.is_accessible:

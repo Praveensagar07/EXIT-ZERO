@@ -262,6 +262,28 @@
             ],
             "is_open": true,
             "is_emergency_exit": false
+          },
+          {
+            "id": "D-103-N",
+            "floor_id": "floor_1",
+            "x": 40.0,
+            "y": 5.0,
+            "width": 2.4,
+            "connects_rooms": [
+              "R-103"
+            ],
+            "is_open": true
+          },
+          {
+            "id": "D-108-S",
+            "floor_id": "floor_1",
+            "x": 40.0,
+            "y": 40.0,
+            "width": 2.0,
+            "connects_rooms": [
+              "R-108"
+            ],
+            "is_open": true
           }
         ],
         "obstacles": [],

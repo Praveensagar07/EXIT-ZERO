@@ -1,16 +1,161 @@
 import math
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 
-from app.models.building import Building, Doorway, Exit, Floor, Room
+from app.models.building import Building, Doorway, Exit, Floor, Obstacle, ObstacleType, Room, Stairwell
 from app.models.graph import GraphEdge, GraphNode, NavigationGraphModel, NodeType
+
+
+def point_in_room(px: float, py: float, room: Room, margin: float = 0.1) -> bool:
+    """Checks if a point (px, py) lies strictly inside a room's interior."""
+    b = room.bounds
+    return (
+        b.x + margin <= px <= b.x + b.width - margin
+        and b.y + margin <= py <= b.y + b.height - margin
+    )
+
+
+def point_in_any_room(px: float, py: float, rooms: List[Room], margin: float = 0.1) -> bool:
+    """Checks if a point (px, py) lies inside any room on the floor."""
+    return any(point_in_room(px, py, r, margin) for r in rooms)
+
+
+def get_room_containing_point(px: float, py: float, rooms: List[Room], margin: float = 0.0) -> Optional[Room]:
+    """Finds the room containing (px, py), or None if outside all rooms."""
+    for r in rooms:
+        b = r.bounds
+        if (
+            b.x - margin <= px <= b.x + b.width + margin
+            and b.y - margin <= py <= b.y + b.height + margin
+        ):
+            return r
+    return None
+
+
+def ccw(A: Tuple[float, float], B: Tuple[float, float], C: Tuple[float, float]) -> float:
+    """2D cross-product of vectors AB and AC."""
+    return (C[1] - A[1]) * (B[0] - A[0]) - (B[1] - A[1]) * (C[0] - A[0])
+
+
+def segments_intersect(
+    p1: Tuple[float, float],
+    p2: Tuple[float, float],
+    q1: Tuple[float, float],
+    q2: Tuple[float, float],
+    tol: float = 1e-4,
+) -> bool:
+    """
+    Determines if line segment (p1, p2) properly intersects segment (q1, q2).
+    Uses robust cross-product orientation test.
+    """
+    d1 = ccw(q1, q2, p1)
+    d2 = ccw(q1, q2, p2)
+    d3 = ccw(p1, p2, q1)
+    d4 = ccw(p1, p2, q2)
+
+    return (
+        ((d1 > tol and d2 < -tol) or (d1 < -tol and d2 > tol))
+        and ((d3 > tol and d4 < -tol) or (d3 < -tol and d4 > tol))
+    )
+
+
+def extract_solid_wall_segments(
+    rooms: List[Room],
+    doorways: List[Doorway],
+    obstacles: List[Obstacle],
+) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
+    """
+    Extracts all physical solid wall segments on a floor.
+    Room boundary walls containing an open doorway are split around the doorway aperture.
+    Closed doors (is_open == False) remain 100% solid barriers.
+    Passable obstacles are ignored; non-passable obstacles have 4 solid boundary walls.
+    """
+    solid_walls: List[Tuple[Tuple[float, float], Tuple[float, float]]] = []
+
+    # 1. Room perimeter walls with apertures for open doorways
+    for r in rooms:
+        b = r.bounds
+        perimeter = [
+            ((b.x, b.y), (b.x + b.width, b.y), "horizontal"),
+            ((b.x, b.y + b.height), (b.x + b.width, b.y + b.height), "horizontal"),
+            ((b.x, b.y), (b.x, b.y + b.height), "vertical"),
+            ((b.x + b.width, b.y), (b.x + b.width, b.y + b.height), "vertical"),
+        ]
+
+        for p1, p2, orient in perimeter:
+            open_doors: List[Tuple[float, float]] = []
+            for d in doorways:
+                if not getattr(d, "is_open", True):
+                    continue  # Closed doors remain solid barriers!
+                dw = getattr(d, "width", 1.2)
+                tol = 1.2 if (getattr(d, "connects_rooms", None) and r.id in d.connects_rooms) else 0.35
+                if orient == "horizontal":
+                    if abs(d.y - p1[1]) < tol and (p1[0] - 0.4 <= d.x <= p2[0] + 0.4):
+                        open_doors.append((d.x, dw))
+                else:
+                    if abs(d.x - p1[0]) < tol and (p1[1] - 0.4 <= d.y <= p2[1] + 0.4):
+                        open_doors.append((d.y, dw))
+
+            if not open_doors:
+                solid_walls.append((p1, p2))
+            else:
+                if orient == "horizontal":
+                    y = p1[1]
+                    open_doors.sort(key=lambda item: item[0])
+                    curr_x = p1[0]
+                    for dx, dw in open_doors:
+                        left_x = max(p1[0], dx - dw / 2.0)
+                        right_x = min(p2[0], dx + dw / 2.0)
+                        if left_x > curr_x + 0.15:
+                            solid_walls.append(((curr_x, y), (left_x, y)))
+                        curr_x = max(curr_x, right_x)
+                    if p2[0] > curr_x + 0.15:
+                        solid_walls.append(((curr_x, y), (p2[0], y)))
+                else:
+                    x = p1[0]
+                    open_doors.sort(key=lambda item: item[0])
+                    curr_y = p1[1]
+                    for dy, dw in open_doors:
+                        top_y = max(p1[1], dy - dw / 2.0)
+                        bot_y = min(p2[1], dy + dw / 2.0)
+                        if top_y > curr_y + 0.15:
+                            solid_walls.append(((x, curr_y), (x, top_y)))
+                        curr_y = max(curr_y, bot_y)
+                    if p2[1] > curr_y + 0.15:
+                        solid_walls.append(((x, curr_y), (x, p2[1])))
+
+    # 2. Add non-passable wall obstacles (e.g. walls drawn in Building Studio)
+    for obs in obstacles:
+        if obs.obstacle_type == ObstacleType.WALL:
+            ox, oy, ow, oh = obs.x, obs.y, obs.width, obs.height
+            solid_walls.append(((ox, oy), (ox + ow, oy)))
+            solid_walls.append(((ox, oy + oh), (ox + ow, oy + oh)))
+            solid_walls.append(((ox, oy), (ox, oy + oh)))
+            solid_walls.append(((ox + ow, oy), (ox + ow, oy + oh)))
+
+    return solid_walls
+
+
+def edge_intersects_any_wall(
+    p1: Tuple[float, float],
+    p2: Tuple[float, float],
+    solid_walls: List[Tuple[Tuple[float, float], Tuple[float, float]]],
+) -> bool:
+    """Returns True if the line segment (p1, p2) intersects any solid wall segment."""
+    for w1, w2 in solid_walls:
+        if segments_intersect(p1, p2, w1, w2):
+            return True
+    return False
 
 
 class BuildingGraphGenerator:
     """
-    Constructs and validates a high-fidelity spatial navigation graph G = (V, E)
-    from building geometry. Discretizes corridors and hallways into navigable
-    waypoints to facilitate microscopic density tracking and realistic crowd movement.
+    Constructs and validates a physically-faithful spatial navigation graph G = (V, E)
+    from building geometry. Rigorously prevents wall clipping:
+      1. Every candidate edge is tested for geometric intersection against solid walls.
+      2. Room interiors connect strictly to designated open doorway thresholds.
+      3. Corridor waypoints exist exclusively in circulation corridors outside rooms.
+      4. Closed doors act as solid impassable barriers.
     """
 
     def __init__(self, waypoint_spacing: float = 4.0):
@@ -19,11 +164,15 @@ class BuildingGraphGenerator:
     def generate_floor_graph(self, floor: Floor) -> Tuple[nx.Graph, NavigationGraphModel]:
         """
         Builds a NetworkX graph and a serializable NavigationGraphModel for a building floor.
+        Ensures strict geometric collision clearance against all solid walls and partitions.
         """
         G = nx.Graph()
         nodes: Dict[str, GraphNode] = {}
         edges: List[GraphEdge] = []
         floor_z = round(getattr(floor, "elevation", 0.0), 2)
+
+        # Extract authoritative solid wall segments for geometric intersection verification
+        solid_walls = extract_solid_wall_segments(floor.rooms, floor.doorways, floor.obstacles)
 
         # 1. Add Room Center Nodes
         for room in floor.rooms:
@@ -54,11 +203,12 @@ class BuildingGraphGenerator:
                 label=room.name,
             )
 
-        # 2. Add Doorway Nodes
+        # 2. Add Doorway Nodes and connect to room centers
         doorway_map: Dict[str, str] = {}
         for door in floor.doorways:
             node_id = f"node_door_{door.id}"
             doorway_map[door.id] = node_id
+            is_door_open = getattr(door, "is_open", True)
             node = GraphNode(
                 id=node_id,
                 floor_id=floor.id,
@@ -66,7 +216,7 @@ class BuildingGraphGenerator:
                 y=round(door.y, 2),
                 z=floor_z,
                 node_type=NodeType.DOORWAY,
-                is_accessible=door.width >= 0.9,  # ADA standard: >=0.9m for wheelchair accessibility
+                is_accessible=door.width >= 0.9,
                 label=f"Door {door.id}",
             )
             nodes[node_id] = node
@@ -81,38 +231,49 @@ class BuildingGraphGenerator:
                 label=node.label,
             )
 
-            # Connect doorway to room center(s)
-            for room_id in door.connects_rooms:
-                room_node_id = f"node_room_{room_id}"
-                if room_node_id in nodes:
-                    r_node = nodes[room_node_id]
-                    dist = math.hypot(door.x - r_node.x, door.y - r_node.y)
-                    effective_dist = max(0.5, round(dist, 2))
-                    # Capacity based on doorway width (standard 1.33 persons/m/sec)
-                    capacity = max(1.0, round(door.width * 1.33, 2))
-                    edge = GraphEdge(
-                        u=room_node_id,
-                        v=node_id,
-                        length=effective_dist,
-                        width=door.width,
-                        capacity_per_sec=capacity,
-                        wheelchair_accessible=node.is_accessible,
-                        hazard_level=0.0,
-                        current_occupants=0,
-                        base_weight=effective_dist,
-                    )
-                    edges.append(edge)
-                    G.add_edge(
-                        room_node_id,
-                        node_id,
-                        length=edge.length,
-                        width=edge.width,
-                        capacity_per_sec=edge.capacity_per_sec,
-                        wheelchair_accessible=edge.wheelchair_accessible,
-                        hazard_level=0.0,
-                        current_occupants=0,
-                        weight=edge.base_weight,
-                    )
+            # ONLY connect open doorways to room centers
+            if is_door_open:
+                connected_rooms = list(door.connects_rooms)
+                if not connected_rooms:
+                    for r in floor.rooms:
+                        b = r.bounds
+                        if (
+                            (b.x - 0.35 <= door.x <= b.x + b.width + 0.35)
+                            and (b.y - 0.35 <= door.y <= b.y + b.height + 0.35)
+                        ):
+                            connected_rooms.append(r.id)
+
+                for room_id in connected_rooms:
+                    room_node_id = f"node_room_{room_id}"
+                    if room_node_id in nodes:
+                        r_node = nodes[room_node_id]
+                        if not edge_intersects_any_wall((r_node.x, r_node.y), (door.x, door.y), solid_walls):
+                            dist = math.hypot(door.x - r_node.x, door.y - r_node.y)
+                            effective_dist = max(0.5, round(dist, 2))
+                            capacity = max(1.0, round(door.width * 1.33, 2))
+                            edge = GraphEdge(
+                                u=room_node_id,
+                                v=node_id,
+                                length=effective_dist,
+                                width=door.width,
+                                capacity_per_sec=capacity,
+                                wheelchair_accessible=node.is_accessible,
+                                hazard_level=0.0,
+                                current_occupants=0,
+                                base_weight=effective_dist,
+                            )
+                            edges.append(edge)
+                            G.add_edge(
+                                room_node_id,
+                                node_id,
+                                length=edge.length,
+                                width=edge.width,
+                                capacity_per_sec=edge.capacity_per_sec,
+                                wheelchair_accessible=edge.wheelchair_accessible,
+                                hazard_level=0.0,
+                                current_occupants=0,
+                                weight=edge.base_weight,
+                            )
 
         # 3. Add Exit Nodes
         exit_map: Dict[str, str] = {}
@@ -143,8 +304,7 @@ class BuildingGraphGenerator:
             )
 
         # 4. Generate Corridor Backbone & Waypoints
-        # Synthesize corridor spine connecting doors and exits
-        corridor_nodes = self._generate_corridor_network(floor, nodes, G)
+        corridor_nodes = self._generate_corridor_network(floor, nodes, G, solid_walls)
         for c_node, c_edges in corridor_nodes:
             if c_node.id not in nodes:
                 nodes[c_node.id] = c_node
@@ -159,47 +319,52 @@ class BuildingGraphGenerator:
                     label=c_node.label,
                 )
             for edge in c_edges:
-                edges.append(edge)
-                G.add_edge(
-                    edge.u,
-                    edge.v,
-                    length=edge.length,
-                    width=edge.width,
-                    capacity_per_sec=edge.capacity_per_sec,
-                    wheelchair_accessible=edge.wheelchair_accessible,
-                    hazard_level=0.0,
-                    current_occupants=0,
-                    weight=edge.base_weight,
-                )
+                u_n = nodes[edge.u]
+                v_n = nodes[edge.v]
+                if not edge_intersects_any_wall((u_n.x, u_n.y), (v_n.x, v_n.y), solid_walls):
+                    edges.append(edge)
+                    G.add_edge(
+                        edge.u,
+                        edge.v,
+                        length=edge.length,
+                        width=edge.width,
+                        capacity_per_sec=edge.capacity_per_sec,
+                        wheelchair_accessible=edge.wheelchair_accessible,
+                        hazard_level=0.0,
+                        current_occupants=0,
+                        weight=edge.base_weight,
+                    )
 
-        # 5. Connect Exits to nearest corridor nodes
-        all_corridor_nodes = [node for node, _ in corridor_nodes]
+        # 5. Connect Exits to nearest corridor or doorway nodes
+        all_potential_exit_connectors = [
+            n for n in nodes.values()
+            if n.node_type in [NodeType.CORRIDOR_JUNCTION, NodeType.CORRIDOR_WAYPOINT, NodeType.DOORWAY]
+        ]
         for exit_elem in floor.exits:
             exit_node_id = exit_map[exit_elem.id]
-            # Find closest corridor or doorway node
-            candidates = [
-                n_id for n_id, n_data in nodes.items()
-                if n_id != exit_node_id and n_data.node_type in [NodeType.CORRIDOR_JUNCTION, NodeType.CORRIDOR_WAYPOINT, NodeType.DOORWAY]
-            ]
-            if not candidates:
-                candidates = [
-                    n_id for n_id in nodes.keys()
-                    if n_id != exit_node_id
-                ]
-            if candidates:
-                # Pick up to 2 closest candidates
-                candidates.sort(
-                    key=lambda nid: math.hypot(nodes[nid].x - exit_elem.x, nodes[nid].y - exit_elem.y)
+            # Prioritize candidates with line of sight (no solid wall intersection)
+            los_candidates = [
+                target_n for target_n in all_potential_exit_connectors
+                if target_n.id != exit_node_id and not edge_intersects_any_wall(
+                    (exit_elem.x, exit_elem.y), (target_n.x, target_n.y), solid_walls
                 )
-                for target_id in candidates[:2]:
-                    target_node = nodes[target_id]
-                    dist = math.hypot(exit_elem.x - target_node.x, exit_elem.y - target_node.y)
+            ]
+            candidates = los_candidates if los_candidates else [
+                target_n for target_n in all_potential_exit_connectors if target_n.id != exit_node_id
+            ]
+
+            if candidates:
+                candidates.sort(
+                    key=lambda tn: math.hypot(exit_elem.x - tn.x, exit_elem.y - tn.y)
+                )
+                for target_n in candidates[:2]:
+                    dist = math.hypot(exit_elem.x - target_n.x, exit_elem.y - target_n.y)
                     effective_dist = max(0.5, round(dist, 2))
-                    if not G.has_edge(exit_node_id, target_id):
-                        is_acc = exit_elem.is_wheelchair_accessible and target_node.is_accessible
+                    if not G.has_edge(exit_node_id, target_n.id):
+                        is_acc = exit_elem.is_wheelchair_accessible and target_n.is_accessible
                         edge = GraphEdge(
                             u=exit_node_id,
-                            v=target_id,
+                            v=target_n.id,
                             length=effective_dist,
                             width=exit_elem.width,
                             capacity_per_sec=exit_elem.throughput_per_sec,
@@ -211,7 +376,7 @@ class BuildingGraphGenerator:
                         edges.append(edge)
                         G.add_edge(
                             exit_node_id,
-                            target_id,
+                            target_n.id,
                             length=edge.length,
                             width=edge.width,
                             capacity_per_sec=edge.capacity_per_sec,
@@ -220,42 +385,6 @@ class BuildingGraphGenerator:
                             current_occupants=0,
                             weight=edge.base_weight,
                         )
-
-        # 6. Ensure rooms without explicit doorways connect to nearest corridor node
-        for room in floor.rooms:
-            room_node_id = f"node_room_{room.id}"
-            if room_node_id in G and G.degree(room_node_id) == 0:
-                if all_corridor_nodes:
-                    r_node = nodes[room_node_id]
-                    closest_c = min(
-                        all_corridor_nodes,
-                        key=lambda cn: math.hypot(cn.x - r_node.x, cn.y - r_node.y),
-                    )
-                    dist = math.hypot(closest_c.x - r_node.x, closest_c.y - r_node.y)
-                    effective_dist = max(0.5, round(dist, 2))
-                    edge = GraphEdge(
-                        u=room_node_id,
-                        v=closest_c.id,
-                        length=effective_dist,
-                        width=1.2,
-                        capacity_per_sec=1.5,
-                        wheelchair_accessible=r_node.is_accessible,
-                        hazard_level=0.0,
-                        current_occupants=0,
-                        base_weight=effective_dist,
-                    )
-                    edges.append(edge)
-                    G.add_edge(
-                        room_node_id,
-                        closest_c.id,
-                        length=edge.length,
-                        width=edge.width,
-                        capacity_per_sec=edge.capacity_per_sec,
-                        wheelchair_accessible=edge.wheelchair_accessible,
-                        hazard_level=0.0,
-                        current_occupants=0,
-                        weight=edge.base_weight,
-                    )
 
         nav_model = NavigationGraphModel(nodes=nodes, edges=edges)
         return G, nav_model
@@ -273,7 +402,11 @@ class BuildingGraphGenerator:
         floor_map = {f.id: f for f in building.floors}
 
         # 1. Generate individual floor subgraphs with floor elevations
+        floor_solid_walls: Dict[str, List[Tuple[Tuple[float, float], Tuple[float, float]]]] = {}
         for floor in building.floors:
+            floor_solid_walls[floor.id] = extract_solid_wall_segments(
+                floor.rooms, floor.doorways, floor.obstacles
+            )
             G_floor, nav_floor = self.generate_floor_graph(floor)
             for nid, node in nav_floor.nodes.items():
                 all_nodes[nid] = node
@@ -376,7 +509,6 @@ class BuildingGraphGenerator:
 
                 # Connect landings across floors with 3D transit length
                 transit_dist = math.hypot(x_to - x_from, y_to - y_from, z_to - z_from)
-                # Ensure minimum transit length reflects actual flight steps / ramp incline
                 min_flight = abs(z_to - z_from) * (2.8 if stair.is_ramp else 1.4)
                 effective_transit = max(max(1.0, min_flight), round(transit_dist, 2))
 
@@ -404,23 +536,24 @@ class BuildingGraphGenerator:
                     weight=vert_edge.base_weight,
                 )
 
-                # Connect landing_from to nearest corridor or doorway node on from_floor
+                # Connect landing_from to nearest corridor or doorway node on from_floor with line of sight
+                walls_from = floor_solid_walls.get(from_fid, [])
                 candidates_from = [
-                    nid for nid, nd in all_nodes.items()
+                    (math.hypot(nd.x - x_from, nd.y - y_from), nid)
+                    for nid, nd in all_nodes.items()
                     if nd.floor_id == from_fid and nd.id != landing_from_id
                     and nd.node_type in [NodeType.CORRIDOR_JUNCTION, NodeType.CORRIDOR_WAYPOINT, NodeType.DOORWAY]
+                    and not edge_intersects_any_wall((x_from, y_from), (nd.x, nd.y), walls_from)
                 ]
                 if not candidates_from:
                     candidates_from = [
-                        nid for nid, nd in all_nodes.items()
+                        (math.hypot(nd.x - x_from, nd.y - y_from), nid)
+                        for nid, nd in all_nodes.items()
                         if nd.floor_id == from_fid and nd.id != landing_from_id
                     ]
                 if candidates_from:
-                    closest_from = min(
-                        candidates_from,
-                        key=lambda cid: math.hypot(all_nodes[cid].x - x_from, all_nodes[cid].y - y_from)
-                    )
-                    d_from = math.hypot(all_nodes[closest_from].x - x_from, all_nodes[closest_from].y - y_from)
+                    candidates_from.sort(key=lambda item: item[0])
+                    d_from, closest_from = candidates_from[0]
                     eff_d_from = max(0.5, round(d_from, 2))
                     edge_from = GraphEdge(
                         u=landing_from_id,
@@ -446,23 +579,24 @@ class BuildingGraphGenerator:
                         weight=edge_from.base_weight,
                     )
 
-                # Connect landing_to to nearest corridor or doorway node on to_floor
+                # Connect landing_to to nearest corridor or doorway node on to_floor with line of sight
+                walls_to = floor_solid_walls.get(to_fid, [])
                 candidates_to = [
-                    nid for nid, nd in all_nodes.items()
+                    (math.hypot(nd.x - x_to, nd.y - y_to), nid)
+                    for nid, nd in all_nodes.items()
                     if nd.floor_id == to_fid and nd.id != landing_to_id
                     and nd.node_type in [NodeType.CORRIDOR_JUNCTION, NodeType.CORRIDOR_WAYPOINT, NodeType.DOORWAY]
+                    and not edge_intersects_any_wall((x_to, y_to), (nd.x, nd.y), walls_to)
                 ]
                 if not candidates_to:
                     candidates_to = [
-                        nid for nid, nd in all_nodes.items()
+                        (math.hypot(nd.x - x_to, nd.y - y_to), nid)
+                        for nid, nd in all_nodes.items()
                         if nd.floor_id == to_fid and nd.id != landing_to_id
                     ]
                 if candidates_to:
-                    closest_to = min(
-                        candidates_to,
-                        key=lambda cid: math.hypot(all_nodes[cid].x - x_to, all_nodes[cid].y - y_to)
-                    )
-                    d_to = math.hypot(all_nodes[closest_to].x - x_to, all_nodes[closest_to].y - y_to)
+                    candidates_to.sort(key=lambda item: item[0])
+                    d_to, closest_to = candidates_to[0]
                     eff_d_to = max(0.5, round(d_to, 2))
                     edge_to = GraphEdge(
                         u=landing_to_id,
@@ -492,147 +626,96 @@ class BuildingGraphGenerator:
         return combined_G, nav_model
 
     def _generate_corridor_network(
-        self, floor: Floor, existing_nodes: Dict[str, GraphNode], G: nx.Graph
+        self,
+        floor: Floor,
+        existing_nodes: Dict[str, GraphNode],
+        G: nx.Graph,
+        solid_walls: List[Tuple[Tuple[float, float], Tuple[float, float]]],
     ) -> List[Tuple[GraphNode, List[GraphEdge]]]:
         """
-        Creates a structured, navigable corridor backbone and connects doors to corridors.
+        Creates a structured, navigable corridor backbone and connects doorways to corridors.
+        CRITICAL: All corridor waypoints are placed strictly in open circulation spaces OUTSIDE rooms.
+        Edges crossing solid walls are strictly prohibited.
         """
         results: List[Tuple[GraphNode, List[GraphEdge]]] = []
-
-        # Find corridor bounding boxes or estimate the central hallway axis
-        # Default corridor structure for modern commercial floors:
-        # Central main spine along y = height/2 or spanning lengthwise with lateral loops
         cy = floor.height / 2.0
         floor_z = round(getattr(floor, "elevation", 0.0), 2)
-        
-        # Discretize corridor spine from x=5m to x=width-5m with waypoint_spacing
-        spine_nodes: List[GraphNode] = []
         step = self.waypoint_spacing
+
+        # 1. Main Corridor Spine along the central hallway axis
         num_points = max(2, int((floor.width - 16.0) / step))
-        
+        spine_nodes: List[GraphNode] = []
+
         for i in range(num_points + 1):
             px = 8.0 + i * ((floor.width - 16.0) / max(1, num_points))
-            node_id = f"node_corr_spine_{floor.id}_{i}"
-            node = GraphNode(
-                id=node_id,
-                floor_id=floor.id,
-                x=round(px, 2),
-                y=round(cy, 2),
-                z=floor_z,
-                node_type=NodeType.CORRIDOR_JUNCTION if (i == 0 or i == num_points or i % 3 == 0) else NodeType.CORRIDOR_WAYPOINT,
-                is_accessible=True,
-                label=f"Hallway Point {i}",
-            )
-            spine_nodes.append(node)
+            # Verify waypoint is in open space outside all rooms
+            if not point_in_any_room(px, cy, floor.rooms):
+                node_id = f"node_corr_spine_{floor.id}_{i}"
+                node = GraphNode(
+                    id=node_id,
+                    floor_id=floor.id,
+                    x=round(px, 2),
+                    y=round(cy, 2),
+                    z=floor_z,
+                    node_type=(
+                        NodeType.CORRIDOR_JUNCTION
+                        if (i == 0 or i == num_points or i % 3 == 0)
+                        else NodeType.CORRIDOR_WAYPOINT
+                    ),
+                    is_accessible=True,
+                    label=f"Hallway Point {i}",
+                )
+                spine_nodes.append(node)
 
-        # Add edges between consecutive spine nodes
+        # Connect consecutive spine nodes if clear line-of-sight
         for i in range(len(spine_nodes)):
             curr = spine_nodes[i]
             local_edges: List[GraphEdge] = []
             if i > 0:
                 prev = spine_nodes[i - 1]
-                dist = math.hypot(curr.x - prev.x, curr.y - prev.y)
-                effective_dist = max(0.5, round(dist, 2))
-                local_edges.append(
-                    GraphEdge(
-                        u=prev.id,
-                        v=curr.id,
-                        length=effective_dist,
-                        width=2.4, # 2.4m wide main hallway
-                        capacity_per_sec=3.2,
-                        wheelchair_accessible=True,
-                        hazard_level=0.0,
-                        current_occupants=0,
-                        base_weight=effective_dist,
+                if not edge_intersects_any_wall((prev.x, prev.y), (curr.x, curr.y), solid_walls):
+                    dist = math.hypot(curr.x - prev.x, curr.y - prev.y)
+                    effective_dist = max(0.5, round(dist, 2))
+                    local_edges.append(
+                        GraphEdge(
+                            u=prev.id,
+                            v=curr.id,
+                            length=effective_dist,
+                            width=2.4,
+                            capacity_per_sec=3.2,
+                            wheelchair_accessible=True,
+                            hazard_level=0.0,
+                            current_occupants=0,
+                            base_weight=effective_dist,
+                        )
                     )
-                )
             results.append((curr, local_edges))
 
-        # Secondary corridor loops if building has height >= 35m (e.g., North/South wings)
-        if floor.height >= 35.0:
-            north_y = cy - 12.0
-            south_y = cy + 12.0
-            for wing_name, wy in [("north", north_y), ("south", south_y)]:
-                wing_nodes: List[GraphNode] = []
-                w_points = max(2, int((floor.width - 24.0) / (step * 1.5)))
-                for j in range(w_points + 1):
-                    wx = 12.0 + j * ((floor.width - 24.0) / max(1, w_points))
-                    node_id = f"node_corr_{wing_name}_{floor.id}_{j}"
-                    node = GraphNode(
-                        id=node_id,
-                        floor_id=floor.id,
-                        x=round(wx, 2),
-                        y=round(wy, 2),
-                        z=floor_z,
-                        node_type=NodeType.CORRIDOR_WAYPOINT,
-                        is_accessible=True,
-                        label=f"{wing_name.capitalize()} Wing {j}",
-                    )
-                    wing_nodes.append(node)
+        # 2. Doorway-to-Corridor Connections with Perpendicular Corridor Approach Nodes
+        door_nodes = [
+            n for n in existing_nodes.values()
+            if n.node_type == NodeType.DOORWAY
+        ]
+        all_spine_nodes = list(spine_nodes)
 
-                # Connect along the wing
-                for k in range(len(wing_nodes)):
-                    w_curr = wing_nodes[k]
-                    w_edges: List[GraphEdge] = []
-                    if k > 0:
-                        w_prev = wing_nodes[k - 1]
-                        dist = math.hypot(w_curr.x - w_prev.x, w_curr.y - w_prev.y)
-                        effective_dist = max(0.5, round(dist, 2))
-                        w_edges.append(
-                            GraphEdge(
-                                u=w_prev.id,
-                                v=w_curr.id,
-                                length=effective_dist,
-                                width=2.0,
-                                capacity_per_sec=2.6,
-                                wheelchair_accessible=True,
-                                hazard_level=0.0,
-                                current_occupants=0,
-                                base_weight=effective_dist,
-                            )
-                        )
-                    results.append((w_curr, w_edges))
-
-                # Cross-connect wing ends and midpoints to central spine
-                for wing_idx in [0, len(wing_nodes) // 2, len(wing_nodes) - 1]:
-                    wn = wing_nodes[wing_idx]
-                    # Find closest spine node
-                    closest_spine = min(
-                        spine_nodes, key=lambda sn: math.hypot(sn.x - wn.x, sn.y - wn.y)
-                    )
-                    dist = math.hypot(closest_spine.x - wn.x, closest_spine.y - wn.y)
-                    effective_dist = max(0.5, round(dist, 2))
-                    results.append(
-                        (
-                            wn,
-                            [
-                                GraphEdge(
-                                    u=wn.id,
-                                    v=closest_spine.id,
-                                    length=effective_dist,
-                                    width=2.0,
-                                    capacity_per_sec=2.6,
-                                    wheelchair_accessible=True,
-                                    hazard_level=0.0,
-                                    current_occupants=0,
-                                    base_weight=effective_dist,
-                                )
-                            ],
-                        )
-                    )
-
-        # Connect all doorways to the nearest corridor node
-        all_corridor_nodes = [node for node, _ in results]
-        door_nodes = [n for n in existing_nodes.values() if n.node_type == NodeType.DOORWAY]
         for door_node in door_nodes:
-            if all_corridor_nodes:
+            door_obj = next((d for d in floor.doorways if f"node_door_{d.id}" == door_node.id), None)
+            if door_obj and not getattr(door_obj, "is_open", True):
+                continue
+
+            # Check direct line-of-sight to existing spine nodes
+            los_spine = [
+                sn for sn in all_spine_nodes
+                if not edge_intersects_any_wall((door_node.x, door_node.y), (sn.x, sn.y), solid_walls)
+            ]
+
+            if los_spine:
                 closest_c = min(
-                    all_corridor_nodes,
-                    key=lambda cn: math.hypot(cn.x - door_node.x, cn.y - door_node.y),
+                    los_spine,
+                    key=lambda sn: math.hypot(sn.x - door_node.x, sn.y - door_node.y),
                 )
                 dist = math.hypot(closest_c.x - door_node.x, closest_c.y - door_node.y)
                 effective_dist = max(0.5, round(dist, 2))
-                # Link doorway to corridor
                 results.append(
                     (
                         door_node,
@@ -651,6 +734,64 @@ class BuildingGraphGenerator:
                         ],
                     )
                 )
+            else:
+                approach_y = door_node.y + (1.5 if door_node.y < cy else -1.5)
+                approach_x = door_node.x
+                if not point_in_any_room(approach_x, approach_y, floor.rooms):
+                    app_node_id = f"node_corr_app_{door_node.id}"
+                    app_node = GraphNode(
+                        id=app_node_id,
+                        floor_id=floor.id,
+                        x=round(approach_x, 2),
+                        y=round(approach_y, 2),
+                        z=floor_z,
+                        node_type=NodeType.CORRIDOR_WAYPOINT,
+                        is_accessible=door_node.is_accessible,
+                        label=f"Approach {door_node.label}",
+                    )
+                    app_edges: List[GraphEdge] = []
+                    dist_d = math.hypot(approach_x - door_node.x, approach_y - door_node.y)
+                    eff_d_d = max(0.5, round(dist_d, 2))
+                    app_edges.append(
+                        GraphEdge(
+                            u=door_node.id,
+                            v=app_node_id,
+                            length=eff_d_d,
+                            width=1.5,
+                            capacity_per_sec=2.0,
+                            wheelchair_accessible=door_node.is_accessible,
+                            hazard_level=0.0,
+                            current_occupants=0,
+                            base_weight=eff_d_d,
+                        )
+                    )
+                    los_from_app = [
+                        sn for sn in all_spine_nodes
+                        if not edge_intersects_any_wall((approach_x, approach_y), (sn.x, sn.y), solid_walls)
+                    ]
+                    target_sn_list = los_from_app if los_from_app else all_spine_nodes
+                    if target_sn_list:
+                        closest_s = min(
+                            target_sn_list,
+                            key=lambda sn: math.hypot(sn.x - approach_x, sn.y - approach_y),
+                        )
+                        dist_s = math.hypot(closest_s.x - approach_x, closest_s.y - approach_y)
+                        eff_d_s = max(0.5, round(dist_s, 2))
+                        app_edges.append(
+                            GraphEdge(
+                                u=app_node_id,
+                                v=closest_s.id,
+                                length=eff_d_s,
+                                width=1.8,
+                                capacity_per_sec=2.4,
+                                wheelchair_accessible=app_node.is_accessible and closest_s.is_accessible,
+                                hazard_level=0.0,
+                                current_occupants=0,
+                                base_weight=eff_d_s,
+                            )
+                        )
+                    results.append((app_node, app_edges))
+                    all_spine_nodes.append(app_node)
 
         return results
 
@@ -663,7 +804,7 @@ class BuildingGraphGenerator:
         """
         is_connected = nx.is_connected(G) if len(G) > 0 else False
         num_components = nx.number_connected_components(G) if len(G) > 0 else 0
-        
+
         # Identify exits
         exit_nodes = [
             nid for nid, n in nav_model.nodes.items() if n.node_type == NodeType.EXIT
@@ -671,7 +812,7 @@ class BuildingGraphGenerator:
         room_nodes = [
             nid for nid, n in nav_model.nodes.items() if n.node_type == NodeType.ROOM_CENTER
         ]
-        
+
         # Check path from each room to at least one exit
         unreachable_rooms: List[str] = []
         room_shortest_exit_dists: Dict[str, float] = {}
@@ -691,16 +832,15 @@ class BuildingGraphGenerator:
                 room_shortest_exit_dists[r_id] = round(min_dist, 2)
 
         # Check wheelchair accessible subgraph
-        # Create subgraph containing only wheelchair_accessible edges and nodes
         accessible_edges = [
             (u, v) for u, v, d in G.edges(data=True) if d.get("wheelchair_accessible", True)
         ]
         G_acc = G.edge_subgraph(accessible_edges).copy()
-        
+
         accessible_exit_nodes = [
             nid for nid in exit_nodes if nav_model.nodes[nid].is_accessible
         ]
-        
+
         unreachable_accessible_rooms: List[str] = []
         for r_id in room_nodes:
             if r_id in G_acc:

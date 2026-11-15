@@ -273,10 +273,59 @@ export const BuildingViewport3D: React.FC<BuildingViewport3DProps> = ({
     fillLight.position.set(-50, 40, -40);
     scene.add(fillLight);
 
-    // Ground Plane Grid
-    const groundGrid = new THREE.GridHelper(140, 70, 0x167d73, 0xe5e7eb);
-    groundGrid.position.set(40, -0.05, 22.5);
+    // Ground Plane Grid and Architectural Foundation Podium Plinth (Matching Image 4)
+    const groundGrid = new THREE.GridHelper(160, 80, 0x167d73, 0xe2e8f0);
+    groundGrid.position.set(40, -0.85, 22.5);
     scene.add(groundGrid);
+
+    // Architectural Ground Foundation Plinth (Matching Image 4)
+    const plinthGroup = new THREE.Group();
+    const plinthMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.4,
+      metalness: 0.3,
+    });
+    const plinthTopMat = new THREE.MeshStandardMaterial({
+      color: 0xf8fafc,
+      roughness: 0.7,
+      metalness: 0.05,
+    });
+    const plinthBase = new THREE.Mesh(
+      new THREE.BoxGeometry(96.0, 0.5, 60.0),
+      plinthMat
+    );
+    plinthBase.position.set(40.0, -0.65, 22.5);
+    plinthBase.receiveShadow = true;
+    plinthGroup.add(plinthBase);
+
+    const plinthTop = new THREE.Mesh(
+      new THREE.BoxGeometry(92.0, 0.15, 56.0),
+      plinthTopMat
+    );
+    plinthTop.position.set(40.0, -0.38, 22.5);
+    plinthTop.receiveShadow = true;
+    plinthGroup.add(plinthTop);
+
+    // Subtle green landscaping curb around podium (matching Image 4 base)
+    const curbMat = new THREE.MeshStandardMaterial({
+      color: 0x15803d,
+      roughness: 0.8,
+    });
+    const curbNorth = new THREE.Mesh(
+      new THREE.BoxGeometry(92.0, 0.08, 1.2),
+      curbMat
+    );
+    curbNorth.position.set(40.0, -0.27, -4.5);
+    plinthGroup.add(curbNorth);
+
+    const curbSouth = new THREE.Mesh(
+      new THREE.BoxGeometry(92.0, 0.08, 1.2),
+      curbMat
+    );
+    curbSouth.position.set(40.0, -0.27, 49.5);
+    plinthGroup.add(curbSouth);
+
+    scene.add(plinthGroup);
 
     // 60 FPS Continuous Animation Loop with Smooth Rig Interpolation
     let lastTime = performance.now();
@@ -458,7 +507,7 @@ export const BuildingViewport3D: React.FC<BuildingViewport3DProps> = ({
         floorGroup.add(c2);
       }
 
-      // Exterior Glass Curtain Walls
+      // Exterior Glass Curtain Walls with Architectural Dark-Aluminum Mullions (Matching BIM Reference)
       const northGlass = new THREE.Mesh(
         new THREE.BoxGeometry(fWidth, wallHeight, 0.08),
         glassCurtainMaterial
@@ -487,7 +536,66 @@ export const BuildingViewport3D: React.FC<BuildingViewport3DProps> = ({
       eastGlass.position.set(fWidth - 0.1, wallHeight / 2, fHeight / 2);
       floorGroup.add(eastGlass);
 
-      // C. Interior Rooms with Door Openings & Interactive Highlights
+      // Aluminum Mullions along exterior glass facade (Matching Image 4)
+      const mullionMat = new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        roughness: 0.35,
+        metalness: 0.8,
+      });
+      const mullionSpacing = 4.0;
+      for (let mx = 0; mx <= fWidth; mx += mullionSpacing) {
+        const mNorth = new THREE.Mesh(
+          new THREE.BoxGeometry(0.09, wallHeight, 0.14),
+          mullionMat
+        );
+        mNorth.position.set(mx, wallHeight / 2, 0.1);
+        mNorth.castShadow = true;
+        floorGroup.add(mNorth);
+
+        const mSouth = new THREE.Mesh(
+          new THREE.BoxGeometry(0.09, wallHeight, 0.14),
+          mullionMat
+        );
+        mSouth.position.set(mx, wallHeight / 2, fHeight - 0.1);
+        mSouth.castShadow = true;
+        floorGroup.add(mSouth);
+      }
+      for (let mz = 0; mz <= fHeight; mz += mullionSpacing) {
+        const mWest = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, wallHeight, 0.09),
+          mullionMat
+        );
+        mWest.position.set(0.1, wallHeight / 2, mz);
+        mWest.castShadow = true;
+        floorGroup.add(mWest);
+
+        const mEast = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, wallHeight, 0.09),
+          mullionMat
+        );
+        mEast.position.set(fWidth - 0.1, wallHeight / 2, mz);
+        mEast.castShadow = true;
+        floorGroup.add(mEast);
+      }
+
+      // Horizontal facade transoms
+      [1.2, 2.4].forEach((transomY) => {
+        const tNorth = new THREE.Mesh(
+          new THREE.BoxGeometry(fWidth, 0.06, 0.12),
+          mullionMat
+        );
+        tNorth.position.set(fWidth / 2, transomY, 0.1);
+        floorGroup.add(tNorth);
+
+        const tSouth = new THREE.Mesh(
+          new THREE.BoxGeometry(fWidth, 0.06, 0.12),
+          mullionMat
+        );
+        tSouth.position.set(fWidth / 2, transomY, fHeight - 0.1);
+        floorGroup.add(tSouth);
+      });
+
+      // C. Interior Rooms with Physical Door Openings, Wall Posts, Lintels & Interactive Highlights
       (floor.rooms || []).forEach((room) => {
         const rx = room.bounds.x;
         const ry = room.bounds.y;
@@ -518,51 +626,255 @@ export const BuildingViewport3D: React.FC<BuildingViewport3DProps> = ({
           data: room,
         });
 
-        // Room perimeter walls
+        // Identify doorways associated with this room
+        const floorDoors = floor.doorways || [];
+        const roomDoors = floorDoors.filter((d) => {
+          if (d.connects_rooms && d.connects_rooms.includes(room.id)) return true;
+          // Boundary match fallback
+          return (
+            d.x >= rx - 0.3 &&
+            d.x <= rx + rw + 0.3 &&
+            d.y >= ry - 0.3 &&
+            d.y <= ry + rh + 0.3
+          );
+        });
+
         const wallThick = 0.18;
-        const rNorth = new THREE.Mesh(
-          new THREE.BoxGeometry(rw, wallHeight, wallThick),
-          interiorWallMaterial
-        );
-        rNorth.position.set(rx + rw / 2, wallHeight / 2, ry);
-        rNorth.receiveShadow = true;
-        floorGroup.add(rNorth);
+        const doorH = 2.3;
+        const headerH = wallHeight - doorH;
 
-        const rSouth = new THREE.Mesh(
-          new THREE.BoxGeometry(rw, wallHeight, wallThick),
-          interiorWallMaterial
-        );
-        rSouth.position.set(rx + rw / 2, wallHeight / 2, ry + rh);
-        rSouth.receiveShadow = true;
-        floorGroup.add(rSouth);
+        // Helper to physically render a wall, splitting into side posts + header lintel around open doorways
+        const buildWallWithOpenings = (
+          x1: number,
+          y1: number,
+          x2: number,
+          y2: number,
+          orient: 'h' | 'v'
+        ) => {
+          // Find doors on this wall segment
+          const wallDoors = roomDoors.filter((d) => {
+            if (orient === 'h') {
+              return (
+                Math.abs(d.y - y1) < 0.35 &&
+                d.x >= Math.min(x1, x2) - 0.2 &&
+                d.x <= Math.max(x1, x2) + 0.2
+              );
+            } else {
+              return (
+                Math.abs(d.x - x1) < 0.35 &&
+                d.y >= Math.min(y1, y2) - 0.2 &&
+                d.y <= Math.max(y1, y2) + 0.2
+              );
+            }
+          });
 
-        const rWest = new THREE.Mesh(
-          new THREE.BoxGeometry(wallThick, wallHeight, rh),
-          interiorWallMaterial
-        );
-        rWest.position.set(rx, wallHeight / 2, ry + rh / 2);
-        rWest.receiveShadow = true;
-        floorGroup.add(rWest);
+          if (wallDoors.length === 0) {
+            // Unbroken solid wall
+            const len = orient === 'h' ? Math.abs(x2 - x1) : Math.abs(y2 - y1);
+            const wMesh = new THREE.Mesh(
+              orient === 'h'
+                ? new THREE.BoxGeometry(len, wallHeight, wallThick)
+                : new THREE.BoxGeometry(wallThick, wallHeight, len),
+              interiorWallMaterial
+            );
+            wMesh.position.set((x1 + x2) / 2, wallHeight / 2, (y1 + y2) / 2);
+            wMesh.receiveShadow = true;
+            wMesh.castShadow = true;
+            floorGroup.add(wMesh);
+            return;
+          }
 
-        const rEast = new THREE.Mesh(
-          new THREE.BoxGeometry(wallThick, wallHeight, rh),
-          interiorWallMaterial
-        );
-        rEast.position.set(rx + rw, wallHeight / 2, ry + rh / 2);
-        rEast.receiveShadow = true;
-        floorGroup.add(rEast);
+          // Split wall around door openings
+          if (orient === 'h') {
+            const minX = Math.min(x1, x2);
+            const maxX = Math.max(x1, x2);
+            const sortedDoors = [...wallDoors].sort((a, b) => a.x - b.x);
+            let curX = minX;
 
-        // Low glass corridor partition along inner corridor edge
-        const glassPartition = new THREE.Mesh(
-          new THREE.BoxGeometry(rw, 1.1, 0.06),
-          glassCurtainMaterial
-        );
-        glassPartition.position.set(
-          rx + rw / 2,
-          0.55,
-          ry < fHeight / 2 ? ry + rh + 0.12 : ry - 0.12
-        );
-        floorGroup.add(glassPartition);
+            sortedDoors.forEach((d) => {
+              const dw = d.width || 1.4;
+              const leftX = Math.max(minX, d.x - dw / 2);
+              const rightX = Math.min(maxX, d.x + dw / 2);
+
+              // Left solid post
+              if (leftX > curX + 0.05) {
+                const segW = leftX - curX;
+                const post = new THREE.Mesh(
+                  new THREE.BoxGeometry(segW, wallHeight, wallThick),
+                  interiorWallMaterial
+                );
+                post.position.set(curX + segW / 2, wallHeight / 2, y1);
+                post.receiveShadow = true;
+                post.castShadow = true;
+                floorGroup.add(post);
+              }
+
+              // Overhead lintel beam above the open doorway
+              if (headerH > 0.05) {
+                const lintel = new THREE.Mesh(
+                  new THREE.BoxGeometry(rightX - leftX, headerH, wallThick),
+                  interiorWallMaterial
+                );
+                lintel.position.set(
+                  (leftX + rightX) / 2,
+                  doorH + headerH / 2,
+                  y1
+                );
+                lintel.receiveShadow = true;
+                lintel.castShadow = true;
+                floorGroup.add(lintel);
+              }
+
+              // Architectural door frame jambs and casing
+              const frameMat = new THREE.MeshStandardMaterial({
+                color: 0x475569,
+                roughness: 0.35,
+                metalness: 0.7,
+              });
+              const leftJamb = new THREE.Mesh(
+                new THREE.BoxGeometry(0.08, doorH, wallThick + 0.04),
+                frameMat
+              );
+              leftJamb.position.set(leftX, doorH / 2, y1);
+              floorGroup.add(leftJamb);
+
+              const rightJamb = new THREE.Mesh(
+                new THREE.BoxGeometry(0.08, doorH, wallThick + 0.04),
+                frameMat
+              );
+              rightJamb.position.set(rightX, doorH / 2, y1);
+              floorGroup.add(rightJamb);
+
+              const topCasing = new THREE.Mesh(
+                new THREE.BoxGeometry(dw + 0.1, 0.12, wallThick + 0.04),
+                frameMat
+              );
+              topCasing.position.set(d.x, doorH + 0.06, y1);
+              floorGroup.add(topCasing);
+
+              // Illuminated Doorway Plaque
+              const plaque = new THREE.Mesh(
+                new THREE.BoxGeometry(0.6, 0.2, 0.04),
+                new THREE.MeshStandardMaterial({
+                  color: 0x167d73,
+                  emissive: 0x0f514b,
+                  emissiveIntensity: 0.4,
+                })
+              );
+              plaque.position.set(d.x, doorH + 0.22, y1 + (y1 < fHeight / 2 ? 0.11 : -0.11));
+              floorGroup.add(plaque);
+
+              curX = Math.max(curX, rightX);
+            });
+
+            // Right solid post
+            if (maxX > curX + 0.05) {
+              const segW = maxX - curX;
+              const post = new THREE.Mesh(
+                new THREE.BoxGeometry(segW, wallHeight, wallThick),
+                interiorWallMaterial
+              );
+              post.position.set(curX + segW / 2, wallHeight / 2, y1);
+              post.receiveShadow = true;
+              post.castShadow = true;
+              floorGroup.add(post);
+            }
+          } else {
+            // Vertical wall splitting
+            const minY = Math.min(y1, y2);
+            const maxY = Math.max(y1, y2);
+            const sortedDoors = [...wallDoors].sort((a, b) => a.y - b.y);
+            let curY = minY;
+
+            sortedDoors.forEach((d) => {
+              const dw = d.width || 1.4;
+              const topY = Math.max(minY, d.y - dw / 2);
+              const botY = Math.min(maxY, d.y + dw / 2);
+
+              if (topY > curY + 0.05) {
+                const segH = topY - curY;
+                const post = new THREE.Mesh(
+                  new THREE.BoxGeometry(wallThick, wallHeight, segH),
+                  interiorWallMaterial
+                );
+                post.position.set(x1, wallHeight / 2, curY + segH / 2);
+                post.receiveShadow = true;
+                post.castShadow = true;
+                floorGroup.add(post);
+              }
+
+              if (headerH > 0.05) {
+                const lintel = new THREE.Mesh(
+                  new THREE.BoxGeometry(wallThick, headerH, botY - topY),
+                  interiorWallMaterial
+                );
+                lintel.position.set(
+                  x1,
+                  doorH + headerH / 2,
+                  (topY + botY) / 2
+                );
+                lintel.receiveShadow = true;
+                lintel.castShadow = true;
+                floorGroup.add(lintel);
+              }
+
+              const frameMat = new THREE.MeshStandardMaterial({
+                color: 0x475569,
+                roughness: 0.35,
+                metalness: 0.7,
+              });
+              const topJamb = new THREE.Mesh(
+                new THREE.BoxGeometry(wallThick + 0.04, doorH, 0.08),
+                frameMat
+              );
+              topJamb.position.set(x1, doorH / 2, topY);
+              floorGroup.add(topJamb);
+
+              const botJamb = new THREE.Mesh(
+                new THREE.BoxGeometry(wallThick + 0.04, doorH, 0.08),
+                frameMat
+              );
+              botJamb.position.set(x1, doorH / 2, botY);
+              floorGroup.add(botJamb);
+
+              curY = Math.max(curY, botY);
+            });
+
+            if (maxY > curY + 0.05) {
+              const segH = maxY - curY;
+              const post = new THREE.Mesh(
+                new THREE.BoxGeometry(wallThick, wallHeight, segH),
+                interiorWallMaterial
+              );
+              post.position.set(x1, wallHeight / 2, curY + segH / 2);
+              post.receiveShadow = true;
+              post.castShadow = true;
+              floorGroup.add(post);
+            }
+          }
+        };
+
+        // Render all 4 perimeter walls with physical door openings
+        buildWallWithOpenings(rx, ry, rx + rw, ry, 'h'); // North wall
+        buildWallWithOpenings(rx, ry + rh, rx + rw, ry + rh, 'h'); // South wall
+        buildWallWithOpenings(rx, ry, rx, ry + rh, 'v'); // West wall
+        buildWallWithOpenings(rx + rw, ry, rx + rw, ry + rh, 'v'); // East wall
+
+        // Low glass corridor partition along inner corridor edge (only where no doors exist)
+        const corridorEdgeY = ry < fHeight / 2 ? ry + rh : ry;
+        const doorsOnCorridorEdge = roomDoors.filter((d) => Math.abs(d.y - corridorEdgeY) < 0.35);
+        if (doorsOnCorridorEdge.length === 0) {
+          const glassPartition = new THREE.Mesh(
+            new THREE.BoxGeometry(rw, 1.1, 0.06),
+            glassCurtainMaterial
+          );
+          glassPartition.position.set(
+            rx + rw / 2,
+            0.55,
+            ry < fHeight / 2 ? ry + rh + 0.12 : ry - 0.12
+          );
+          floorGroup.add(glassPartition);
+        }
 
         // Studio Mode: Render Dimension Badges on Selected Room (matching target UI)
         if (isStudioMode && isSelected) {
@@ -587,37 +899,6 @@ export const BuildingViewport3D: React.FC<BuildingViewport3DProps> = ({
           widBadge.rotation.z = Math.PI / 2;
           floorGroup.add(widBadge);
         }
-      });
-
-      // D. Doorways with Distinct Architectural Frames
-      (floor.doorways || []).forEach((door) => {
-        const doorW = door.width || 1.4;
-        const doorH = 2.3;
-        const frameMat = new THREE.MeshStandardMaterial({
-          color: 0x64748b,
-          roughness: 0.4,
-        });
-
-        const headerMesh = new THREE.Mesh(
-          new THREE.BoxGeometry(doorW + 0.1, 0.15, 0.28),
-          frameMat
-        );
-        headerMesh.position.set(door.x, doorH + 0.075, door.y);
-        floorGroup.add(headerMesh);
-
-        const leftJamb = new THREE.Mesh(
-          new THREE.BoxGeometry(0.08, doorH, 0.28),
-          frameMat
-        );
-        leftJamb.position.set(door.x - doorW / 2, doorH / 2, door.y);
-        floorGroup.add(leftJamb);
-
-        const rightJamb = new THREE.Mesh(
-          new THREE.BoxGeometry(0.08, doorH, 0.28),
-          frameMat
-        );
-        rightJamb.position.set(door.x + doorW / 2, doorH / 2, door.y);
-        floorGroup.add(rightJamb);
       });
 
       // E. Emergency Exits (3D Double Doors with Illuminated Overhead Egress Signs)
